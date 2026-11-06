@@ -50,7 +50,7 @@ test('the curved monitor approach has no physical occluders at screen edges/corn
  }assert.equal(checked,837);
 });
 test('long selected air legs reach their intended material without newly introduced architecture intercepting them',()=>{
- const court=createCourtyard(),ray=new T.Raycaster();assert.equal(court.triangles.length,96);
+ const court=createCourtyard(),ray=new T.Raycaster();assert.equal(court.triangles.length,144);
  for(const leg of [0,1,2,4]){
   const from=new T.Vector3(...route[leg]),to=new T.Vector3(...route[leg+1]),direction=to.clone().sub(from).normalize(),length=from.distanceTo(to);
   ray.set(from.clone().addScaledVector(direction,.1),direction);ray.far=length-.2;

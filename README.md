@@ -2,9 +2,9 @@
 
 Prezentare în română pentru Programare grafică avansată și prelucrarea imaginilor: 15 teme, patru secvențe de deplasare, aproximativ 17–19 minute cu opriri pentru demonstrații, urmate de explorare opțională.
 
-Începem la un birou obișnuit, cu PC și monitor. Monitorul arată curtea în mișcare lentă, rasterizată. Intrarea continuă aceeași mișcare în lumea virtuală: un culoar umbrit se deschide spre o curte adâncă, un element difuz cian, o foaie de poartă din bronz cald, un vestibul de sticlă și o cameră retrasă cu lumină caldă. Materialele fac parte din arhitectură. Secțiunea BVH folosește cele 96 de triunghiuri ale arcului structural din spate.
+Începem la un birou obișnuit, cu PC și monitor. Intrăm prin monitor într-un observator suspendat peste un canion: stânci colorate, o punte cu grinzi, un instrument difuz cian, un heliostat de bronz cu ramă, o placă groasă de sticlă și un far îndepărtat. Un singur traseu leagă aceste repere. BVH-ul didactic este construit din triunghiurile reale ale punții; numărul de teste și closest-hit provin din aceeași geometrie.
 
-Raza pornește înaintea observatorului. Camera o urmărește pe segmente de aproximativ 41, 50, 55 și 40 de unități, apoi se așază la fiecare demonstrație. La sticlă sunt distincte sosirea, intrarea, ieșirea și continuarea. Navigarea rămâne manuală.
+Raza pornește înaintea observatorului. Camera o urmărește pe segmente lungi între reperele din canion, apoi se așază la fiecare demonstrație. La sticlă sunt distincte sosirea, intrarea, ieșirea și continuarea. Navigarea rămâne manuală.
 
 ## Checkpoint local
 
@@ -36,16 +36,16 @@ Site-ul nu folosește CDN, framework UI sau backend. Bibliotecile, fonturile și
 - **Space / Right / PageDown**: următorul pas. În timpul unui zbor, prima apăsare îl încheie; următoarea avansează.
 - **Left / PageUp**: pasul anterior, cu starea completă restaurată.
 - **O**: cuprins; **C**: cod; **N**: detalii; **F**: fullscreen.
-- **Home / End**: început / ultimul slide.
-- Codul și detaliile pun animația pe pauză. Slide-ul principal are o explicație scurtă și cel mult două idei; detaliile păstrează derivările și observațiile complete.
-- Diagramele și comenzile lecției stau într-o zonă opacă, separată de viewport-ul scenei. Pe telefon, scena apare deasupra lecției.
-- BVH: selectează noduri. **Opțiuni** deschide părinții, raza hit/miss și **Alege ținta** și click pe arc. **Primul / Pas / Ultimul / Rulează** controlează traversarea; triunghiul closest-hit este magenta.
+- **Home / End**: început / ultimul capitol.
+- Codul și detaliile pun animația pe pauză. Cardul principal are o explicație scurtă, o formulă și demonstrația activă; detaliile păstrează derivările și observațiile complete.
+- Lumea 3D ocupă întregul ecran și păstrează același aspect în lecție și deplasare. Cardul compact este suprapus în stânga-jos; comenzile experimentului rămân fixate sub conținut. Pe telefon, cardul ocupă cel mult 41% din înălțime.
+- BVH: selectează noduri. **Opțiuni** deschide părinții, raza hit/miss și **Alege ținta** și click pe punte. **Primul / Pas / Ultimul / Rulează** controlează traversarea; triunghiul closest-hit este magenta.
 - Intersecția rază–triunghi: slidere u/v și cazuri interior, muchie, exterior, paralel. Diagrama și BVH-ul folosesc aceeași implementare Möller–Trumbore.
 - Bucla de path tracing: pași manuali pentru contribuția emisivă, shadow ray, BSDF și registrele L/β.
 - Sticlă: alege o predicție pentru direcția de ieșire, apoi vezi ramura transmisă prin ambele fețe.
-- Samples: modifică separat numărul traseelor și limita de bounces. SAH: compară costul unor tăieturi reale pe arc.
-- În demonstrația Samples, observatorul rămâne lângă sticlă. O vedere izolată ascunde temporar arhitectura și arată aceeași sferă ca wireframe translucid. Cele 12/24/48 de lansări ilustrate sunt reprezentative; bugetul SPP rămâne separat. Geometria revine la ieșirea din demonstrație.
-- Raza afișează nuanța normalizată a ponderii RGB β. Valorile RGB liniare și max(β) se citesc separat; nuanța singură nu arată mărimea contribuției. Materialele cian și bronz folosesc aceleași culori în geometrie și în calculul didactic al ponderii.
+- Samples: modifică separat numărul traseelor și limita de bounces. SAH: compară costul unor tăieturi reale pe punte.
+- În demonstrația Samples, observatorul rămâne lângă sticlă, iar lumea rămâne vizibilă. Cele 12/24/48 de lansări ilustrate sunt reprezentative; bugetul SPP rămâne separat. Adăugarea unui lot lansează raze noi fără să repornească loturile anterioare.
+- Raza afișează nuanța normalizată a ponderii RGB β. Nuanța singură nu arată mărimea contribuției; calculul RGB complet este explicat în Detalii. Materialele cian și bronz folosesc aceleași culori în geometrie și în calculul didactic al ponderii.
 - Zgomot: experiment sintetic la 1/4/16/64/256 samples, cu RMSE măsurat față de un semnal cunoscut. Nu pornește rendererul path-traced.
 
 Linkuri directe: `#chapter=bvh`, `#chapter=traversal`, `#chapter=materials&beat=to-glass`. Sunt păstrate aliasurile vechi `gpu`, `accumulation`, `modern`.
@@ -54,7 +54,7 @@ Linkuri directe: `#chapter=bvh`, `#chapter=traversal`, `#chapter=materials&beat=
 
 Prezentarea și capturile folosesc exclusiv rasterizare. **Nu există inițializare, compilare sau randare path-traced în fundal.**
 
-Butonul final **Explorare** deschide întâi curtea rasterizată. Doar **Start path tracing** importă și inițializează `WebGLPathTracer`. Butonul **Oprește path tracing** revine la rasterizare. O verificare GPU anterioară, din 5 noiembrie 2026, a urmărit acumularea la 320 × 180 și două bounces. În revizia curentă nu s-a pornit tracer-ul. Comparațiile la multe samples și benchmark-ul la calitatea maximă rămân separate.
+Butonul final **Explorare** deschide întâi canionul rasterizat. Doar **Start path tracing** importă și inițializează `WebGLPathTracer`. Butonul **Oprește path tracing** revine la rasterizare. O verificare GPU anterioară, din 5 noiembrie 2026, a urmărit acumularea la 320 × 180 și două bounces. În revizia curentă nu s-a pornit tracer-ul. Comparațiile la multe samples și benchmark-ul la calitatea maximă rămân separate.
 
 Implementarea păstrează:
 
@@ -70,24 +70,16 @@ Experimentul Monte Carlo folosește un semnal scalar Bernoulli cunoscut, cu seed
 
 Orbit: drag; pan: click dreapta; zoom: scroll; deplasare: W/A/S/D și Q/E; Shift pentru viteză. Există reset cameră și revenire la prezentare. Fără floating-point render targets, rămâne disponibilă explorarea rasterizată.
 
-## PPTX și capturi
+## Scena web și capturi
 
-`output/raytracing.pptx`: 16:9, 15 slide-uri principale + două anexe, cu text, formule, cod și diagrame editabile, trei proiecții CPU explicite ale geometriei actuale, note și citări. Include răspunsul pentru placa de sticlă, costuri SAH calculate, intervale slab reale, un pas concret de pruning și experimentul sintetic de convergență. Proiecțiile CPU nu sunt capturi de browser și nu reproduc iluminarea, reflexiile sau transmisia WebGL. Nicio imagine a scenei vechi nu este prezentată ca rezultat al redesign-ului. Fonturile DejaVu sunt incluse în `public/fonts/`; instalează-le pe calculatorul cu PowerPoint pentru aceeași aranjare.
+Revizia canionului este exclusiv web. Fișierele PPTX și exporturile existente sunt istorice și nu au fost regenerate pentru această scenă. Prototipul anterior de compoziție BVH este păstrat local în `.build/prototype-reference/`, în afara surselor și a build-ului de producție.
 
-Manifestul comun este `src/content/chapters.ts`: conținut, note, surse și secvențe. Pozițiile de cameră active sunt în `Beat`, iar `src/core/cinematics.ts` calculează `shotPose`, mișcarea razei și intrarea prin monitor. Exportul ignoră câmpurile legacy `Chapter.camera/target` și folosește aceste poziții active. Capturi deterministe fără UI: `?capture=diffuse`, `?capture=to-glass`, `?capture=final`. **Inclusiv `final` și vechiul alias `beauty` sunt rasterizate.** Adaugă `&ui=1` pentru capturi cu overlay sau `&phase=0.5` pentru un moment precis din tranziție. Starea `body[data-capture-ready="true"]` indică finalizarea capturii.
+`src/content/chapters.ts` păstrează conținutul, notele și sursele celor 15 teme. `src/content/world-shots.ts` definește cadrele active, inclusiv cele pentru telefon. `src/core/world.ts` definește reperele canionului, iar `src/core/cinematics.ts` calculează mișcarea camerei și a razei. Câmpurile legacy `Chapter.camera/target` nu definesc cadrele active.
 
-Pentru regenerarea PPTX-ului în mediul Codex cu `@oai/artifact-tool` disponibil:
+Capturi deterministe fără UI: `?capture=diffuse`, `?capture=to-glass`, `?capture=final`. Inclusiv `final` și aliasul `beauty` sunt rasterizate. Adaugă `&ui=1` pentru interfață sau `&phase=0.5` pentru un moment precis din tranziție. `body[data-capture-ready="true"]` indică finalizarea capturii. Rasterul redus este mărit cu nearest-neighbor; textul și comenzile DOM rămân clare la rezoluția ecranului.
 
-```sh
-node --experimental-strip-types scripts/render-current-projections.mjs
-sh .build/current-projections/convert.sh
-node --experimental-strip-types scripts/export-manifest.mjs
-node scripts/build-deck.mjs
-```
+Verificarea în browserul integrat a acoperit desktop 1280 × 720 și telefon 390 × 844: camera cu PC, heliostatul, sticla cu ambele interfețe și normalele vizibile, adăugarea de samples în aceeași lume, arborele BVH, traversarea și rezultatul numeric, intersecția interactivă, codul, notele și farul final. Valorile implicite ale traversării sunt 15 teste AABB, 6 teste de triunghi, triunghiul #98 și tClosest = 36.277; sumarul rămâne fixat deasupra comenzilor. Verificările geometrice complete au trecut 41 de teste, iar TypeScript și build-ul Vite au trecut. Path tracer-ul nu a fost pornit în această revizie.
 
-Calea bibliotecilor poate fi schimbată cu `PRESENTATION_RUNTIME` și cea a skill-ului cu `PRESENTATION_SKILL`. Proiecțiile CPU curente sunt în `.build/current-projections/`, la aspectul viewport-ului scenei de 794×568 într-o fereastră de 1280×720; conversia folosește ImageMagick. `assets/captures/` și vechiul `.build/cinematic-review/` păstrează rezultate istorice, nefolosite în PPTX-ul actual. Exporterul creează randări în `.build/slides/`, verifică pachetul, dimensiunile, fonturile și importul cu runtime-ul first-party, apoi actualizează copia canonică numai după validare. Versiunile anterioare sunt păstrate în `.build/revisions/`. Manifestul exportat, inclusiv datele geometrice și experimentele fără GPU, este `.build/deck-content.json`. `output/raytracing-preview.jpg` arată cele 17 slide-uri, iar `raytracing-glass-preview.png` redă diagrama editabilă a sticlei.
-
-Toate cele 17 slide-uri au fost regenerate. Paginile modificate, inclusiv proiecțiile scenei, distribuția cosine-weighted, unghiurile sticlei și valorile SAH, au fost inspectate la 1280 × 720. Layout-urile neschimbate păstrează verificarea anterioară. Verificarea vizuală în browser pe desktop/telefon și Microsoft PowerPoint nativ nu au fost disponibile pentru această revizie. Verificările de layout în browser din revizia precedentă nu reprezintă o verificare a interfeței actuale.
 
 ## Preview prin tailnet
 
@@ -98,6 +90,8 @@ npm run preview -- --host <TAILNET_IP> --port 4173 --strictPort --base=/raytraci
 ```
 
 Deschide `http://upsilon:4173/raytracing/` de pe dispozitivul conectat la tailnet. `preview.allowedHosts` permite explicit `upsilon`. Adresa IP funcționează și direct.
+
+Build-ul canionului a trecut verificarea TypeScript și Vite. HTML-ul, toate chunk-urile JavaScript și CSS-ul servite din `/raytracing/` au răspuns cu 200, tipul MIME corect și conținut identic cu `dist/`. Raportul local este `.build/canyon-web-delivery.json`. Auditul HTTP citește octeții fișierelor; nu execută path tracer-ul.
 
 ## GitHub Pages
 

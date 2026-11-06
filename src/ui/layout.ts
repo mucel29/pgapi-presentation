@@ -8,14 +8,12 @@ export function projectedPosition(point:{x:number;y:number;z:number},rect:Rect){
  return {x:rect.left+(point.x+1)*rect.width/2,y:rect.top+(1-point.y)*rect.height/2,
   visible:Number.isFinite(point.x)&&Number.isFinite(point.y)&&point.z> -1&&point.z<1&&Math.abs(point.x)<=1&&Math.abs(point.y)<=1};
 }
-/** CSS-pixel rectangles shared by the DOM and the canvas projection. */
+/** The world never changes aspect when a teaching card appears or disappears. */
 export function presentationLayout(width:number,height:number,mode:PresentationMode='lesson'){
- const compact=width<1050,full=mode==='explorer'||mode==='capture';
- const headerHeight=full?0:Math.min(compact?64:72,Math.floor(height*.16));
- const footerHeight=full?0:Math.min(compact?72:80,Math.floor(height*.18));
- const available=Math.max(1,height-headerHeight-footerHeight);
- if(mode!=='lesson')return {compact,headerHeight,footerHeight,scene:{left:0,top:headerHeight,width,height:available},rail:null as Rect|null};
- if(!compact){const railWidth=Math.round(Math.min(520,Math.max(400,width*.38)));return {compact,headerHeight,footerHeight,rail:{left:0,top:headerHeight,width:railWidth,height:available},scene:{left:railWidth,top:headerHeight,width:width-railWidth,height:available}};}
- const sceneHeight=Math.min(360,Math.max(180,Math.round(height*.38)),Math.floor(available*.55));
- return {compact,headerHeight,footerHeight,scene:{left:0,top:headerHeight,width,height:sceneHeight},rail:{left:0,top:headerHeight+sceneHeight,width,height:available-sceneHeight}};
+ const compact=width<760,full=mode==='explorer'||mode==='capture';
+ const headerHeight=full?0:compact?58:68,footerHeight=full?0:compact?64:72;
+ const margin=compact?12:24,cardWidth=Math.min(compact?410:370,width-margin*2);
+ const cardHeight=Math.min(compact?340:510,Math.max(140,height-headerHeight-footerHeight-margin*2));
+ return {compact,headerHeight,footerHeight,scene:{left:0,top:0,width,height},
+  rail:mode==='lesson'?{left:margin,top:height-footerHeight-margin-cardHeight,width:cardWidth,height:cardHeight}:null as Rect|null};
 }

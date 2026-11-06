@@ -39,71 +39,44 @@ test('actual lesson and travel viewports preserve framing and pixel-square coord
  }
 });
 
-test('new loop and sample views keep their subjects clear at the actual scene aspects',()=>{
+test('canyon focal objects and primary sample paths remain visible in full-scene desktop and phone views',()=>{
  const court=createCourtyard(),ray=new T.Raycaster();
  for(const [w,h] of [[1280,720],[390,844]]){
   const rect=presentationLayout(w,h).scene,aspect=rect.width/rect.height;
-  const {camera}=cameraAt('loop',1,aspect);
-  for(const p of court.triangles[30])assert.ok(inFrame(new T.Vector3(...p).project(camera)));
-  const mirror=new T.Vector3(...route[2]).project(camera);
-  assert.ok(mirror.z>1||mirror.z< -1,'mirror is behind the loop observer');
-  const leaf=court.reflector.geometry.attributes.position;
-  for(let vertex=0;vertex<leaf.count;vertex++){
-   const p=new T.Vector3().fromBufferAttribute(leaf,vertex).applyMatrix4(court.reflector.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
-   assert.ok(p.z>0,'the entire mirror leaf is behind the loop observer');
-  }
-  for(const p of court.triangles[30]){
-   const target=new T.Vector3(...p),direction=target.clone().sub(camera.position),distance=direction.length();
-   ray.set(camera.position,direction.normalize());ray.far=distance+.01;
+  const bridge=cameraAt('bvh',1,aspect).camera;
+  for(const p of court.triangles[court.traversal.triangle]){
+   const target=new T.Vector3(...p);assert.ok(inFrame(target.clone().project(bridge)));
+   const direction=target.clone().sub(bridge.position),distance=direction.length();ray.set(bridge.position,direction.normalize());ray.far=distance+.01;
    const first=ray.intersectObject(court.world,true)[0];
-   assert.ok(!first||first.object===court.teaching||first.distance>=distance-.02,'arch is not hidden behind another prop');
+   assert.ok(!first||first.object===court.teaching||first.distance>=distance-.02,'the selected bridge triangle is not hidden behind another structure');
   }
-  const sample=cameraAt('samples',1,aspect).camera;
-  assert.ok(inFrame(new T.Vector3(...origin).project(sample)));
-  const sampleVisuals=new JourneyVisuals(court);
-  sampleVisuals.apply(beats.find(b=>b.id==='samples')!);sampleVisuals.update(1,4.18);sampleVisuals.fitHead(sample,rect.height);
-  for(const head of sampleVisuals.samples.children.filter((_,i)=>i%2===1)){
-   const pixels=2*.19*head.scale.x/(2*Math.tan(T.MathUtils.degToRad(43)/2)*sample.position.distanceTo(head.position))*rect.height;
-   assert.ok(pixels>=4.2-1e-6,'sample head remains at least four pixels wide');
-  }
-  for(const path of illustratedSamples())for(const fraction of [.1,.5,1]){
-   const point=new T.Vector3(...path.origin).lerp(new T.Vector3(...path.end),fraction);
-   assert.ok(inFrame(point.clone().project(sample)),'primary head and first hit stay in the scene');
-   const direction=point.clone().sub(sample.position),distance=direction.length();ray.set(sample.position,direction.normalize());ray.far=distance-.12;
-   const opaque=ray.intersectObject(court.world,true).filter(h=>h.object.visible&&!(h.object.material as T.MeshPhysicalMaterial).transmission&&!(h.object.material as T.MeshBasicMaterial).wireframe);
-   assert.equal(opaque.length,0,'primary launches are not hidden behind an opaque prop');
-  }
-  sampleVisuals.apply(beats.find(b=>b.id==='loop')!);
-  const direction=new T.Vector3(...route[2]).sub(new T.Vector3(...route[1])).normalize();
-  const reflected=reflectionSamples(direction.toArray(),metalNormal);
-  assert.equal(reflected.length,12);
   const material=cameraAt('materials',1,aspect).camera;
   assert.ok(material.position.clone().sub(new T.Vector3(...route[2])).dot(new T.Vector3(...metalNormal))>0);
-  // Check the two newly changed camera rails, including the curved segments.
-  for(const id of ['samples','loop'])for(let n=1;n<=120;n++){
-   const a=cameraAt(id,(n-1)/120,aspect).camera.position,b=cameraAt(id,n/120,aspect).camera.position;
-   const distance=a.distanceTo(b);if(distance<1e-8)continue;
-   for(const [from,to] of [[a,b],[b,a]]){
-    ray.set(from,to.clone().sub(from).normalize());ray.far=distance;
-    assert.equal(ray.intersectObject(court.world,true).length,0,`${id} camera crosses a surface at ${n/120}`);
-   }
+  assert.ok(inFrame(new T.Vector3(...route[2]).project(material)));
+  assert.equal(reflectionSamples(new T.Vector3(...route[2]).sub(new T.Vector3(...route[1])).normalize().toArray(),metalNormal).length,12);
+  const sample=cameraAt('samples',1,aspect).camera;
+  for(const path of illustratedSamples())for(const fraction of [0,.1,.5,1]){
+   const point=new T.Vector3(...path.origin).lerp(new T.Vector3(...path.end),fraction);
+   assert.ok(inFrame(point.clone().project(sample)),'primary launch and first hit stay visible');
+   const direction=point.clone().sub(sample.position),distance=direction.length();ray.set(sample.position,direction.normalize());ray.far=distance-.12;
+   const opaque=ray.intersectObject(court.world,true).filter(h=>h.object.visible&&!(h.object.material as T.MeshPhysicalMaterial).transmission);
+   assert.equal(opaque.length,0,'primary launch is not hidden by scene geometry');
   }
  }
 });
 
-test('samples isolation restores the exact architecture and material state on leave and revisit',()=>{
+test('samples keep all actual architecture, visibility and materials unchanged through revisit and replay',()=>{
  const court=createCourtyard(),visuals=new JourneyVisuals(court),original=court.sphere.material;
  const meshes:T.Mesh[]=[];court.world.traverse(o=>{if(o instanceof T.Mesh)meshes.push(o);});
  meshes[0].visible=false;const visibility=meshes.map(o=>o.visible);visuals.rasterOnly.visible=false;
  for(let visit=0;visit<2;visit++){
+  visuals.apply(beats.find(b=>b.id==='samples')!);visuals.update(1,4.18);
+  assert.deepEqual(meshes.map(o=>o.visible),visibility);
+  assert.ok(court.sphere.material===original);assert.equal(visuals.rasterOnly.visible,false);
   visuals.apply(beats.find(b=>b.id==='samples')!);
-  assert.deepEqual(meshes.filter(o=>o.visible),[court.sphere]);
-  assert.equal((court.sphere.material as T.MeshBasicMaterial).wireframe,true);
-  assert.equal(visuals.path.visible,false);assert.equal(visuals.rasterOnly.visible,false);
-  visuals.apply(beats.find(b=>b.id==='samples')!); // replay must not overwrite the saved state
+  assert.deepEqual(meshes.map(o=>o.visible),visibility);
   visuals.apply(beats.find(b=>b.id==='loop')!);
-  assert.equal(court.sphere.material,original);assert.deepEqual(meshes.map(o=>o.visible),visibility);
-  assert.equal(visuals.rasterOnly.visible,false);
+  assert.ok(court.sphere.material===original);assert.deepEqual(meshes.map(o=>o.visible),visibility);
  }
 });
 

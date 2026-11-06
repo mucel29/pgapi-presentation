@@ -24,11 +24,9 @@ export class JourneyVisuals{
  testRayOrigin:Vec3=[0,0,0];testRayDirection:Vec3=[0,0,-1];rayCase='hit';private traceResult:ReturnType<typeof traceSAH>;private testBeam:T.Mesh;private hitMesh:T.Mesh;private hitOutline:T.LineLoop;private hitPoint=marker(0xff70b8,.13);private hitId=-2;private highlightKey='';
  private fans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private sampleLines:{mesh:T.Mesh;a:Vec3;b:Vec3;index:number;startedAt:number;tip:T.Mesh}[]=[];private mirrorFans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private highlight:T.Mesh;private elapsed=0;private userSelected=false;private splitPlane:T.Mesh;candidateIndex=0;
  room:Courtyard;
- private isolated=false;private savedVisibility=new Map<T.Object3D,boolean>();private savedRasterVisibility=true;private sphereMaterial:T.Material;private sphereWire:T.MeshBasicMaterial;
  constructor(room:Courtyard){
   this.room=room;
-  this.sphereMaterial=room.sphere.material;this.sphereWire=new T.MeshBasicMaterial({color:(room.sphere.material as T.MeshStandardMaterial).color,wireframe:true,transparent:true,opacity:.3,depthWrite:false});
-  this.testRayOrigin=[...room.rayOrigin];this.testRayDirection=[...room.rayDirection];this.traceResult=room.traversal;this.root.name='Illustrations — excluded from path tracing';room.scene.add(this.root);const mirror=new Reflector(new T.PlaneGeometry(10,13),{textureWidth:256,textureHeight:256,color:0xb4a68c,clipBias:.003,multisample:0});mirror.position.set(...route[2]).addScaledVector(new T.Vector3(...metalNormal),.025);mirror.quaternion.copy(surfaceRotation(metalNormal));const renderMirror=mirror.onBeforeRender.bind(mirror);mirror.onBeforeRender=(renderer,scene,camera,geometry,material,group)=>{const rv=room.reflector.visible,fv=room.reflectorFrame.visible,iv=this.root.visible;room.reflector.visible=false;room.reflectorFrame.visible=false;this.root.visible=false;try{renderMirror(renderer,scene,camera,geometry,material,group);}finally{room.reflector.visible=rv;room.reflectorFrame.visible=fv;this.root.visible=iv;}};mirror.name='Raster planar reflection — excluded from tracer';this.rasterOnly.name='Raster reflections';room.scene.add(this.rasterOnly);this.rasterOnly.add(mirror);
+  this.testRayOrigin=[...room.rayOrigin];this.testRayDirection=[...room.rayDirection];this.traceResult=room.traversal;this.root.name='Illustrations — excluded from path tracing';room.scene.add(this.root);const mirror=new Reflector(new T.PlaneGeometry(9,10),{textureWidth:256,textureHeight:256,color:0xb4a68c,clipBias:.003,multisample:0});mirror.position.set(...route[2]).addScaledVector(new T.Vector3(...metalNormal),.025);mirror.quaternion.copy(surfaceRotation(metalNormal));const renderMirror=mirror.onBeforeRender.bind(mirror);mirror.onBeforeRender=(renderer,scene,camera,geometry,material,group)=>{const rv=room.reflector.visible,fv=room.reflectorFrame.visible,iv=this.root.visible;room.reflector.visible=false;room.reflectorFrame.visible=false;this.root.visible=false;try{renderMirror(renderer,scene,camera,geometry,material,group);}finally{room.reflector.visible=rv;room.reflectorFrame.visible=fv;this.root.visible=iv;}};mirror.name='Raster planar reflection — excluded from tracer';this.rasterOnly.name='Raster reflections';room.scene.add(this.rasterOnly);this.rasterOnly.add(mirror);
   (this.headHalo.material as T.MeshBasicMaterial).opacity=.15;this.headHalo.renderOrder=13;this.packet.renderOrder=15;this.contact.renderOrder=14;
   this.root.add(this.headHalo,this.tail,this.tailHalo,this.contact);
   this.root.add(this.path,this.hemisphere,this.samples,this.normals,this.boxes,this.wire,this.materialRays,this.shadow,this.packet);
@@ -59,7 +57,7 @@ export class JourneyVisuals{
   this.hitMesh=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({color:0xff70b8,side:T.DoubleSide,transparent:true,opacity:.95,depthTest:false,depthWrite:false,toneMapped:false}));this.hitMesh.renderOrder=30;this.hitOutline=new T.LineLoop(new T.BufferGeometry(),new T.LineBasicMaterial({color:0xffedf6,depthTest:false,toneMapped:false}));this.hitOutline.renderOrder=31;this.root.add(this.hitMesh,this.hitOutline,this.hitPoint);
   const test=beam(0xffdf98,.05);this.testBeam=test;stretch(test,room.rayOrigin,add(room.rayOrigin,mul(room.rayDirection,36)));this.wire.add(test);
  }
- setResolution(width:number,height:number){for(const box of this.boxObjects.values()){box.ink.resolution.set(width,height);box.outline.resolution.set(width,height);}}
+ setResolution(width:number,height:number){for(const box of this.boxObjects.values()){box.ink.resolution.set(width,height);box.outline.resolution.set(width,height);box.ink.linewidth=1;box.outline.linewidth=2.4;}}
  get illustratedSampleCount(){return this.sampleLines.length;}
  setSampleCount(count:number){
   const wanted=Math.max(1,Math.min(48,Math.floor(count))),previous=this.sampleLines.length;
@@ -76,18 +74,6 @@ export class JourneyVisuals{
   if(this.beat?.visual==='materials'&&!this.beat.travel)return this.mirrorFans.some((_,i)=>emissionProgress(this.elapsed,i)<1);
   return false;
  }
- private isolateSamples(enabled:boolean){
-  if(enabled===this.isolated)return;
-  this.isolated=enabled;
-  if(enabled){
-   this.savedRasterVisibility=this.rasterOnly.visible;this.rasterOnly.visible=false;
-   this.room.world.traverse(o=>{if(o instanceof T.Mesh){this.savedVisibility.set(o,o.visible);o.visible=o===this.room.sphere;}});
-   this.room.sphere.material=this.sphereWire;
-  }else{
-   for(const [object,visible] of this.savedVisibility)object.visible=visible;
-   this.savedVisibility.clear();this.room.sphere.material=this.sphereMaterial;this.rasterOnly.visible=this.savedRasterVisibility;
-  }
- }
  fitHead(camera:T.PerspectiveCamera,height:number){
   const pixelScale=(position:T.Vector3,radius:number,pixels:number)=>Math.max(.6,2*Math.tan(T.MathUtils.degToRad(camera.fov)/2)*camera.position.distanceTo(position)/Math.max(1,height)*pixels/radius);
   const scale=pixelScale(this.packet.position,.2,2.6);this.packet.scale.setScalar(scale);this.headHalo.scale.setScalar(scale);
@@ -96,7 +82,7 @@ export class JourneyVisuals{
  get splitCandidates(){const candidates=[...this.tree.candidates].sort((a,b)=>a.cost-b.cost);return [candidates[0],candidates[Math.floor(candidates.length/3)],candidates[Math.floor(candidates.length*2/3)]];}
  setSplitCandidate(index:number){this.candidateIndex=Math.max(0,Math.min(2,index));this.revision++;this.updateBoxes();}
  get tree(){return this.room.tree;}get traversal(){return this.traceResult;}
- apply(beat:Beat){this.isolateSamples(beat.visual==='samples');this.revision++;this.candidateIndex=0;this.beat=beat;this.elapsed=0;this.sampleLines.forEach((line,index)=>{line.startedAt=0;line.index=index;});this.lastStep=-1;this.manualStep=null;this.selected=this.tree;this.userSelected=false;this.progress=beat.rayFrom;this.setCase('hit');this.update(0,beat.rayFrom);}
+ apply(beat:Beat){this.revision++;this.candidateIndex=0;this.beat=beat;this.elapsed=0;this.sampleLines.forEach((line,index)=>{line.startedAt=0;line.index=index;});this.lastStep=-1;this.manualStep=null;this.selected=this.tree;this.userSelected=false;this.progress=beat.rayFrom;this.setCase('hit');this.update(0,beat.rayFrom);}
  select(id:number){this.revision++;this.userSelected=true;const step=this.traversal.events.findIndex(e=>e.node.id===id);if(this.beat?.visual==='traversal'&&step>=0){this.manualStep=step;this.lastStep=step;}this.selected=this.nodes.find(n=>n.id===id)??this.tree;this.updateBoxes();}
  step(delta:number){this.userSelected=false;this.manualStep=Math.max(0,Math.min(this.traversal.events.length-1,(this.manualStep??Math.max(0,this.lastStep))+delta));this.update(this.elapsed,this.progress);}
  setCase(kind:string){
@@ -114,13 +100,14 @@ export class JourneyVisuals{
  get currentHit(){return this.beat?.visual==='traversal'?this.event:this.traceResult;}
  get event(){return this.traversal.events[Math.max(0,this.lastStep)];}
  get displayRoot(){if(this.userSelected)return this.selected.depth>0?this.selected:this.tree;const active=this.beat?.visual==='traversal'?this.event?.node:this.selected;if(!active||active.depth<2)return this.tree;const depth=Math.max(0,active.depth-2);return this.nodes.find(n=>n.depth===depth&&active.indices.every(i=>n.indices.includes(i)))??this.tree;}
- visibleNodes(){const root=this.displayRoot;return this.nodes.filter(n=>n.depth>=root.depth&&n.depth<=root.depth+2&&n.indices.every(i=>root.indices.includes(i)));}
+ get bvhStage(){return this.beat?.visual==='bvh'&&!this.userSelected?(this.elapsed<1.6?0:1):2;}
+ visibleNodes(){const root=this.displayRoot;return this.nodes.filter(n=>n.depth>=root.depth&&n.depth<=root.depth+this.bvhStage&&n.indices.every(i=>root.indices.includes(i)));}
  private updateBoxes(){
   const c=this.beat?.visual??'',event=this.event;const active=c==='traversal'?event?.node:this.selected;
   for(const node of this.nodes){
-   const box=this.boxObjects.get(node.id)!,ancestor=active?.indices.every(i=>node.indices.includes(i)),child=active?.children?.includes(node),recent=c==='traversal'?this.traversal.events.slice(Math.max(0,this.lastStep-3),this.lastStep+1).find(e=>e.node.id===node.id):undefined,rejected=recent?.status==='miss'||recent?.status==='pruned';
-   box.group.visible=this.boxes.visible&&(c==='sah'?node===this.tree:c==='bvh'&&!this.userSelected?node.depth<=Math.min(2,Math.floor(this.elapsed/1.2)):Boolean(node===active||ancestor||child||rejected));
-   const isActive=node===active,isRejected=isActive&&(event?.status==='miss'||event?.status==='pruned')||rejected;box.ink.color.set(isRejected?bvhInk.rejected:isActive?bvhInk.active:child?bvhInk.child:bvhInk.ancestor);box.ink.linewidth=isActive?4.5:3;box.outline.linewidth=isActive?9:7;box.ink.dashed=Boolean(isRejected);box.ink.dashSize=.35;box.ink.gapSize=.18;
+   const box=this.boxObjects.get(node.id)!,child=active?.children?.includes(node),recent=c==='traversal'?this.traversal.events.slice(Math.max(0,this.lastStep-3),this.lastStep+1).find(e=>e.node.id===node.id):undefined,rejected=recent?.status==='miss'||recent?.status==='pruned';
+   box.group.visible=this.boxes.visible&&(c==='sah'?node===this.tree:c==='bvh'&&!this.userSelected?(this.elapsed<1.6?node===this.tree:Boolean(this.tree.children?.includes(node))):Boolean(node===active||child||rejected));
+   const isActive=node===active,isRejected=isActive&&(event?.status==='miss'||event?.status==='pruned')||rejected;box.ink.color.set(isRejected?bvhInk.rejected:isActive?bvhInk.active:child?bvhInk.child:bvhInk.ancestor);box.ink.linewidth=isActive?1.3:1;box.outline.linewidth=isActive?2.7:2.3;box.ink.dashed=Boolean(isRejected);box.ink.dashSize=.35;box.ink.gapSize=.18;
   }
 
   const split=this.splitCandidates[this.candidateIndex];if(c==='sah'&&split){const size=new T.Vector3(...this.tree.max).sub(new T.Vector3(...this.tree.min));this.splitPlane.position.set(...this.tree.min).addScaledVector(size,.5);this.splitPlane.position.setComponent(split.axis,split.plane);this.splitPlane.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().setComponent(split.axis,1));this.splitPlane.scale.set(split.axis===0?size.z:size.x,split.axis===1?size.z:size.y,1);}

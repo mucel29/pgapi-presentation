@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {add,mul,sub,type Vec3} from './math.ts';
 import {route} from './route.ts';
+import {observatory} from './world.ts';
 import {monitor,portalLens,portalCut} from './portal.ts';
 export type ShotMotion='hold'|'launch'|'travel'|'glass'|'portal'|'arrive';
 export const clamp01=(t:number)=>Math.max(0,Math.min(1,t));
@@ -37,11 +38,11 @@ export function shotState(motion:ShotMotion,t:number,from:number,to:number){
  const phase=u<.13?'anticipation':u>.94?'arrival':motion==='glass'&&((u>=.5&&u<=.6)||(u>=.74&&u<=.82))?'interface':'travel';
  return {camera,ray:u===1?to:ray,phase};
 }
-export const portalStart:Vec3=[-56,5.5,60],portalEnd:Vec3=[-52,5.5,44],portalAim:Vec3=[-32,4,-2];
+export const portalStart:Vec3=[...observatory.entrance],portalEnd:Vec3=[...observatory.landing],portalAim:Vec3=[...observatory.entranceAim];
 // The texture camera and world camera sample this SAME rail on both sides of
 // the cut. Position, aim and first derivative are therefore continuous.
 export function portalWorldPose(t:number,start:Vec3=portalStart){
- const u=clamp01(t),v=1-u,c1:Vec3=add(start,[1,0,-4]),c2:Vec3=[-54,5.5,50];
+ const u=clamp01(t),v=1-u,c1:Vec3=add(start,[2,-.4,-6]),c2:Vec3=[-73,19,62];
  const position=add(add(mul(start,v*v*v),mul(c1,3*v*v*u)),add(mul(c2,3*v*u*u),mul(portalEnd,u*u*u)));
  return {position,target:portalAim};
 }
@@ -56,6 +57,11 @@ export function shotPose(shot:ShotDefinition,previous:ShotDefinition,t:number,as
  const state=shotState(shot.motion??'arrive',t,shot.rayFrom,shot.rayTo);
  if(shot.motion==='portal')return {...portalWorldPose(t),...state};
  const fromCamera=aspect<.9?previous.portraitCamera??previous.camera:previous.camera,toCamera=aspect<.9?shot.portraitCamera??shot.camera:shot.camera,fromTarget=aspect<.9?previous.portraitTarget??previous.target:previous.target,toTarget=aspect<.9?shot.portraitTarget??shot.target:shot.target;
+ if(shot.motion==='travel'||shot.motion==='launch'){
+  const fromHead=routePoint(shot.rayFrom),toHead=routePoint(shot.rayTo),head=routePoint(state.ray),blend=state.camera;
+  const fromOffset=sub(fromCamera,fromHead),toOffset=sub(toCamera,toHead),fromAim=sub(fromTarget,fromHead),toAim=sub(toTarget,toHead);
+  return {position:add(head,add(fromOffset,mul(sub(toOffset,fromOffset),blend))),target:add(head,add(fromAim,mul(sub(toAim,fromAim),blend))),...state};
+ }
  if(shot.motion==='glass'){
   // Sidecar witness: lag behind the ray, never overtake an independently
   // interpolated look-at target. Park before the entry hold, then show both

@@ -10,8 +10,9 @@ import {shotPose,shotState,portalWorldPose,portalStart,roomApproachPose} from '.
 import {origin,throughput} from '../core/route';
 import {weightDisplay} from '../core/transport.ts';
 import {type Vec3} from '../core/math';
-import {rasterSize,projectedPosition} from '../ui/layout';
+import {projectedPosition} from '../ui/layout';
 import {monitor,portalLens,portalCut} from '../core/portal';
+import {retroRaster} from '../core/raster';
 
 export class Journey{
  renderer:T.WebGLRenderer;camera=new T.PerspectiveCamera(43,1,.05,400);room=createRoom();courtyard=createCourtyard();visuals:JourneyVisuals;
@@ -38,7 +39,7 @@ export class Journey{
  projectPoint(point:Vec3){this.camera.updateMatrixWorld();const rect=this.canvas.getBoundingClientRect(),viewport=rect.width&&rect.height?rect:this.sceneViewport;return projectedPosition(new T.Vector3(...point).project(this.camera),viewport);}
  get primaryPixel(){return this.projectPoint(origin);}
  get rayWeight(){return weightDisplay(throughput[Math.min(4,Math.max(0,Math.floor(this.visuals.progress)))]);}
- resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=rasterSize({width,height},this.exploring?1280:960);this.renderer.setSize(size.width,size.height,false);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.canvas.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
+ resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=retroRaster(width,height);this.renderer.setSize(size.width,size.height,false);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.canvas.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
  setBeat(index:number,immediate=false,replay=false){
   this.invalidateRaster();this.portalFrame=-1;this.index=Math.max(0,Math.min(beats.length-1,index));const b=this.beat,previous=beats[Math.max(0,this.index-1)];this.elapsed=0;this.transition=immediate?1:0;
   // A beat is a reproducible rail from its canonical predecessor, including
@@ -69,7 +70,7 @@ export class Journey{
  private renderPortal(){
   const b=this.beat,aspect=this.camera.aspect,frame=Math.floor(this.elapsed*16);if(frame===this.portalFrame&&Math.abs(aspect-this.portalAspect)<1e-6)return;
   this.portalFrame=frame;this.portalAspect=aspect;this.portalCamera.fov=portalLens(aspect).textureFov;this.portalCamera.updateProjectionMatrix();
-  const start=b.scene==='room'?[-56+Math.sin(this.elapsed*.18)*.7,5.5,60+Math.sin(this.elapsed*.13)*.9] as [number,number,number]:this.portalFrom;
+  const start=b.scene==='room'?[portalStart[0]+Math.sin(this.elapsed*.18)*.7,portalStart[1],portalStart[2]+Math.sin(this.elapsed*.13)*.9] as [number,number,number]:this.portalFrom;
   const pose=portalWorldPose(b.scene==='portal'?this.transition:0,start);if(b.scene==='room')this.monitorPosition=[...pose.position];this.portalCamera.position.set(...pose.position);this.portalCamera.lookAt(...pose.target);
   const visible=this.visuals.root.visible;this.visuals.root.visible=false;this.renderer.setRenderTarget(this.portalTarget);this.renderer.render(this.courtyard.scene,this.portalCamera);this.renderer.setRenderTarget(null);this.visuals.root.visible=visible;
  }

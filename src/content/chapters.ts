@@ -1,3 +1,4 @@
+import {applyObservatoryShots,observatoryFinalView} from './world-shots.ts';
 import type {Vec3} from '../core/math';
 export type Layout='scene'|'technical'|'travel';
 export interface SlideCopy {title:string;intro:string;points:string[];formula:string;}
@@ -27,7 +28,7 @@ export const chapters:Chapter[] = [
     "section": "INTRODUCERE",
     "title": "Algoritmul Ray Tracing",
     "accent": "INTERSECȚII · MATERIALE · BVH",
-    "intro": "Un pixel din monitor trebuie să primească o culoare. Urmărim un traseu prin curte pentru a vedea ce calcule contribuie la ea.",
+    "intro": "Un pixel din monitor trebuie să primească o culoare. Urmărim un traseu prin canion pentru a vedea ce calcule contribuie la ea.",
     "points": [
       "Camera virtuală lansează raza, iar intersecțiile găsesc suprafețele întâlnite.",
       "Materialele schimbă direcția și ponderea traseului.",
@@ -37,7 +38,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "O singură contribuție explică algoritmul. Imaginea cere multe asemenea estimări.",
     "code": "renderer.render(scene, observerCamera);\n// Path tracer-ul se încarcă numai la Start.",
     "codeLabel": "Randarea prezentării",
-    "notes": "Deschidere: „Cum ajunge lumina din curtea de pe monitor într-un singur pixel?” Nu explicăm încă ecuația razei. Camera de pe birou oferă contextul, apoi intrăm prin monitor în scena virtuală. Vom urmări un traseu selectat și vom opri animația la calculele care contează. Ray tracing este mecanismul de interogare geometrică. Path tracing îl folosește pentru a estima transportul de lumină prin sampling. Animația este rasterizată și traseul este construit pentru explicație, nu reprezintă o randare Monte Carlo deja calculată. Explorarea cu path tracing rămâne o acțiune opțională, după lecție.",
+    "notes": "Deschidere: „Cum ajunge lumina din canionul de pe monitor într-un singur pixel?” Nu explicăm încă ecuația razei. Camera de pe birou oferă contextul, apoi intrăm prin monitor în scena virtuală. Vom urmări un traseu selectat și vom opri animația la calculele care contează. Ray tracing este mecanismul de interogare geometrică. Path tracing îl folosește pentru a estima transportul de lumină prin sampling. Animația este rasterizată și traseul este construit pentru explicație, nu reprezintă o randare Monte Carlo deja calculată. Explorarea cu path tracing rămâne o acțiune opțională, după lecție.",
     "camera": [
       2.4,
       3.5,
@@ -77,7 +78,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "o: origine · d: direcție · t ≥ 0",
     "code": "vec2 uv = (pixel + jitter) / resolution;\nvec4 view = inverseProjectionMatrix\n  * vec4(uv * 2.0 - 1.0, -1.0, 1.0);\nvec3 d = normalize(mat3(cameraWorldMatrix) * view.xyz);\nRay ray = Ray(cameraPosition, d);",
     "codeLabel": "Raza primară · inverse projection",
-    "notes": "Arată camera virtuală, apoi pixelul mărit și direcția care le unește. Un singur r(t) descrie o infinitate de puncte. La intersecție vom rezolva pentru t, nu vom avansa raza cu pași mici. Sensul cameră → sursă economisește traseele care nu pot contribui la imagine. Codul folosește o cameră pinhole și inverse projection pentru FOV și aspect ratio. Convenția originii coordonatelor pixelului trebuie să corespundă framebuffer-ului. Lens sampling, motion blur și camera orthographic cer generatoare diferite. Monitorul din prolog nu este originea geometrică a razei din curte.",
+    "notes": "Arată camera virtuală, apoi pixelul mărit și direcția care le unește. Un singur r(t) descrie o infinitate de puncte. La intersecție vom rezolva pentru t, nu vom avansa raza cu pași mici. Sensul cameră → sursă economisește traseele care nu pot contribui la imagine. Codul folosește o cameră pinhole și inverse projection pentru FOV și aspect ratio. Convenția originii coordonatelor pixelului trebuie să corespundă framebuffer-ului. Lens sampling, motion blur și camera orthographic cer generatoare diferite. Monitorul din prolog nu este originea geometrică a razei din canion.",
     "camera": [
       -34,
       9,
@@ -122,7 +123,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "Ponderile vârfurilor sunt 1−u−v, u și v.",
     "code": "const e1 = sub(b,a), e2 = sub(c,a);\nconst p = cross(d,e2), det = dot(e1,p);\nif (Math.abs(det) < 1e-8) return null;\nconst tv = sub(o,a), u = dot(tv,p)/det;\nif (u < 0 || u > 1) return null;\nconst q = cross(tv,e1), v = dot(d,q)/det;\nif (v < 0 || u+v > 1) return null;\nconst t = dot(e2,q)/det;\nreturn t > 1e-4 ? t : null;",
     "codeLabel": "Möller–Trumbore · fragment prescurtat",
-    "notes": "Începe cu un punct din interior, apoi mută-l dincolo de muchia BC: de ce există încă intersecție cu planul, dar nu cu triunghiul? La u+v > 1, ponderea lui A devine negativă. Cazul de pe muchie este acceptat de testul didactic. Determinantul aproape nul indică paralelism sau degenerare. Implementarea locală testează ambele fețe, fără backface culling. Epsilon-urile sunt praguri didactice, nu o soluție universală pentru toate scările scenei. Primul obiect al traseului este o sferă: punctul său de contact este construit analitic în route.ts. Diagrama rază–triunghi explică separat primitiva folosită de mesh-uri și apoi de BVH-ul arcului. Pentru sferă, înlocuirea lui o+td în |p−c|²=r² produce o ecuație de gradul doi. În producție, teste watertight pot evita fisurile numerice la muchii comune.",
+    "notes": "Începe cu un punct din interior, apoi mută-l dincolo de muchia BC: de ce există încă intersecție cu planul, dar nu cu triunghiul? La u+v > 1, ponderea lui A devine negativă. Cazul de pe muchie este acceptat de testul didactic. Determinantul aproape nul indică paralelism sau degenerare. Implementarea locală testează ambele fețe, fără backface culling. Epsilon-urile sunt praguri didactice, nu o soluție universală pentru toate scările scenei. Primul obiect al traseului este o sferă: punctul său de contact este construit analitic în route.ts. Diagrama rază–triunghi explică separat primitiva folosită de mesh-uri și apoi de BVH-ul punții. Pentru sferă, înlocuirea lui o+td în |p−c|²=r² produce o ecuație de gradul doi. În producție, teste watertight pot evita fisurile numerice la muchii comune.",
     "camera": [
       -28,
       9,
@@ -167,7 +168,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "Lambertian + cosine-weighted sampling",
     "code": "float r = sqrt(u1);\nfloat phi = 2.0 * PI * u2;\nvec3 local = vec3(r * cos(phi),\n                  r * sin(phi), sqrt(1.0-u1));\nvec3 nextDirection = tangentFrame * local;\nthroughput *= albedo;",
     "codeLabel": "GLSL · sampling în spațiul local",
-    "notes": "Arată normala și două direcții valide, apoi segmentul ales spre metal. O suprafață mată nu trimite toate razele pe normală. Cosine-weighted sampling favorizează direcțiile apropiate de normală deoarece estimatorul conține deja cosθ. Formula de pe slide este rezultatul simplificării, nu o regulă pentru orice material sau orice PDF. β este o pondere RGB a estimatorului. Culoarea segmentului nu descrie un foton care își schimbă fizic culoarea. Direcția spre reflector este selectată pentru poveste și se află în emisfera validă. Evantaiul este un set determinist de eșantioane ilustrative, nu toate ramurile executate ale unui singur path.",
+    "notes": "Arată normala și două direcții valide, apoi segmentul ales spre metal. O suprafață mată nu trimite toate razele pe normală. Cosine-weighted sampling favorizează direcțiile apropiate de normală deoarece estimatorul conține deja cosθ. Formula afișată este rezultatul simplificării, nu o regulă pentru orice material sau orice PDF. β este o pondere RGB a estimatorului. Culoarea segmentului nu descrie un foton care își schimbă fizic culoarea. Direcția spre reflector este selectată pentru poveste și se află în emisfera validă. Evantaiul este un set determinist de eșantioane ilustrative, nu toate ramurile executate ale unui singur path.",
     "camera": [
       -29,
       11,
@@ -211,7 +212,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "IOR = 1.5 · ramura transmisă prin ambele fețe",
     "code": "vec3 n = entering ? outwardNormal : -outwardNormal;\nfloat eta = entering ? 1.0 / ior : ior;\nfloat c = clamp(dot(-direction, n), 0.0, 1.0);\nbool tir = eta * sqrt(max(0.0, 1.0-c*c)) > 1.0;\nvec3 next = tir || random() < fresnelSchlick(c, eta)\n  ? reflect(direction, n) : refract(direction, n, eta);",
     "codeLabel": "GLSL · dielectric ideal (schematic)",
-    "notes": "După reflexia pe metal, oprește la sticlă: „După două fețe paralele, în ce direcție iese raza?” Lasă un răspuns înainte de reveal. Raza emergentă este paralelă, dar deplasată lateral, dacă mediul exterior este același și nu urmărim reflexiile interne. Normala folosită de refract trebuie orientată împotriva direcției incidente. Snippet-ul arată numai alegerea direcției. Un estimator complet aplică și ponderile BSDF/PDF și factorii de transport la transmisie. În route.ts, geometria segmentelor respectă Snell, dar throughput-ul de după sticlă este păstrat ilustrativ, fără ponderi Fresnel sau absorbție. Metalul folosește o pondere RGB didactică. Rendererul final are model de microfațete. La ieșirea din sticlă, un unghi suficient de mare poate face refracția imposibilă, caz în care se reflectă întreaga energie pentru dielectricul ideal.",
+    "notes": "La heliostat anticipează următoarea oprire, sticla: „După două fețe paralele, în ce direcție iese raza?” Lasă un răspuns înainte de reveal. Raza emergentă este paralelă, dar deplasată lateral, dacă mediul exterior este același și nu urmărim reflexiile interne. Normala folosită de refract trebuie orientată împotriva direcției incidente. Snippet-ul arată numai alegerea direcției. Un estimator complet aplică și ponderile BSDF/PDF și factorii de transport la transmisie. În route.ts, geometria segmentelor respectă Snell, dar throughput-ul de după sticlă este păstrat ilustrativ, fără ponderi Fresnel sau absorbție. Metalul folosește o pondere RGB didactică. Rendererul final are model de microfațete. La ieșirea din sticlă, un unghi suficient de mare poate face refracția imposibilă, caz în care se reflectă întreaga energie pentru dielectricul ideal.",
     "camera": [
       8,
       12,
@@ -226,12 +227,12 @@ export const chapters:Chapter[] = [
     "layout": "technical",
     "slide": {
       "title": "Reflexie și refracție",
-      "intro": "După două fețe paralele, în ce direcție iese raza?",
+      "intro": "Heliostatul reflectă raza spre placa de sticlă.",
       "points": [
         "Metal: reflexie, lărgită de roughness",
         "Sticlă: Snell la intrare și la ieșire"
       ],
-      "formula": "η₁ sinθ₁ = η₂ sinθ₂"
+      "formula": "d′ = d − 2(d·n)n"
     }
   },
   {
@@ -336,14 +337,14 @@ export const chapters:Chapter[] = [
     "intro": "La 1920 × 1080, 64 samples și până la 6 interacțiuni, bucla poate cere aproximativ 796 de milioane de interogări closest-hit pentru o imagine.",
     "points": [
       "Brute force repetă testul pentru fiecare triunghi al scenei la fiecare interogare.",
-      "În exemplul arcului avem 96 de triunghiuri și putem număra exact testele.",
+      "Puntea este construită din triunghiuri reale; numărăm exact testele.",
       "Un BVH trebuie să păstreze același closest-hit cu mai puține teste de primitive."
     ],
     "formula": "1920 × 1080 × 64 × 6 ≈ 796 milioane",
     "formulaNote": "Buget ilustrativ de interogări · fără shadow rays",
     "code": "float closest = INF;\nfor (int i = 0; i < triangleCount; i++) {\n  float t = intersectTriangle(ray, triangles[i]);\n  if (t > EPSILON && t < closest) {\n    closest = t;\n    hitTriangle = i;\n  }\n}",
     "codeLabel": "GLSL · căutare liniară (schematic)",
-    "notes": "Fă mai întâi calculul pentru o imagine, fără numărul de triunghiuri. La 1920×1080 avem 2.073.600 pixeli. Înmulțirea cu 64 samples și 6 interogări de-a lungul fiecărui traseu dă 796.262.400 cereri closest-hit. Este un buget ilustrativ, nu un benchmark sau un număr de teste măsurat. Brute force ar mai înmulți acest cost cu numărul triunghiurilor. Shadow rays nu sunt incluse, iar terminarea timpurie reduce unele trasee. Restrângem acum problema la cele 96 de triunghiuri reale ale arcului: comparăm răspunsul geometric și numărul testelor, fără să deducem un FPS din ele.",
+    "notes": "Fă mai întâi calculul pentru o imagine, fără numărul de triunghiuri. La 1920×1080 avem 2.073.600 pixeli. Înmulțirea cu 64 samples și 6 interogări de-a lungul fiecărui traseu dă 796.262.400 cereri closest-hit. Este un buget ilustrativ, nu un benchmark sau un număr de teste măsurat. Brute force ar mai înmulți acest cost cu numărul triunghiurilor. Shadow rays nu sunt incluse, iar terminarea timpurie reduce unele trasee. Restrângem acum problema la triunghiurile reale ale punții: comparăm răspunsul geometric și numărul testelor, fără să deducem un FPS din ele.",
     "camera": [
       -14,
       15,
@@ -377,9 +378,9 @@ export const chapters:Chapter[] = [
     "section": "BVH · CONSTRUCȚIE",
     "title": "Construirea unui BVH",
     "accent": "BOUNDING VOLUME HIERARCHY",
-    "intro": "Cele 96 de triunghiuri ale arcului sunt grupate într-un arbore de cutii. O cutie ratată elimină toate primitivele din subarbore.",
+    "intro": "Triunghiurile structurii de pod sunt grupate într-un arbore de cutii. O cutie ratată elimină toate primitivele din subarbore.",
     "points": [
-      "Rădăcina conține întregul arc. Copiii conțin grupuri din ce în ce mai mici.",
+      "Rădăcina conține întreaga punte. Copiii conțin grupuri din ce în ce mai mici.",
       "Nodurile interne păstrează AABB-uri. Frunzele păstrează referințe la triunghiuri.",
       "În arborele didactic fiecare triunghi apare într-o singură frunză. Cutiile copiilor pot avea suprapuneri.",
       "Selectarea unui nod leagă grupul din arbore de geometria pe care o acoperă."
@@ -388,7 +389,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "Fiecare triunghi apare într-o singură frunză.",
     "code": "const node = { ...union(bounds, indices), indices };\nif (indices.length <= leafSize) return node;\n// Centre AABB: 16 bin-uri pe fiecare axă.\nconst split = minimumSAHCost(candidates);\nnode.children = [\n  build(leftOf(split)), build(rightOf(split))\n];",
     "codeLabel": "Construcție binned SAH · pseudocod prescurtat",
-    "notes": "Selectează rădăcina, un copil și o frunză. Aceeași selecție trebuie să poată fi recunoscută în arbore și în scenă. Arată o zonă de curte aflată în afara unei cutii: o rază care nu atinge acea cutie nu are de ce să testeze triunghiurile din interior. Cutiile sunt calculate din vertecșii reali ai arcului. Suprapunerea copiilor este permisă, deci uneori vizităm ambele ramuri. Arborele didactic încearcă frunze de maximum patru triunghiuri, dar poate opri mai devreme dacă nu există un split valid. BVH nu garantează O(log N) pentru orice rază sau scenă. Rendererul final construiește separat BVH-ul întregii scene prin three-mesh-bvh.",
+    "notes": "Selectează rădăcina, un copil și o frunză. Aceeași selecție trebuie să poată fi recunoscută în arbore și în scenă. Arată o zonă de canion aflată în afara unei cutii: o rază care nu atinge acea cutie nu are de ce să testeze triunghiurile din interior. Cutiile sunt calculate din vertecșii reali ai punții. Suprapunerea copiilor este permisă, deci uneori vizităm ambele ramuri. Arborele didactic încearcă frunze de maximum patru triunghiuri, dar poate opri mai devreme dacă nu există un split valid. BVH nu garantează O(log N) pentru orice rază sau scenă. Rendererul final construiește separat BVH-ul întregii scene prin three-mesh-bvh.",
     "camera": [
       -14,
       15,
@@ -403,7 +404,7 @@ export const chapters:Chapter[] = [
     "layout": "technical",
     "slide": {
       "title": "Construirea unui BVH",
-      "intro": "Grupăm aceleași 96 de triunghiuri în cutii.",
+      "intro": "Grupăm aceleași triunghiuri ale punții în cutii.",
       "points": [
         "Nod: o cutie care acoperă primitivele de dedesubt",
         "Miss la cutie: eliminăm întregul grup"
@@ -433,7 +434,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "S: arie · N: primitive · Ct = Ci = 1 în modelul local",
     "code": "const cost = 1 + (\n  area(leftBounds) * left.length +\n  area(rightBounds) * right.length\n) / area(parentBounds);\n// Alege candidatul cu cost minim.",
     "codeLabel": "TypeScript · formula folosită de buildSAH",
-    "notes": "Compară două plane candidate pe arcul real. Întreabă care ar lăsa cutii mai greu de evitat, apoi verifică valoarea calculată. Echilibrarea numărului de triunghiuri nu este obiectivul în sine. SAH folosește aria suprafeței, nu volumul, ca model de probabilitate pentru o distribuție generală de raze. În constructorul local, punctele folosite la binning sunt centrele AABB-urilor triunghiurilor. Codul continuă împărțirea peste leafSize dacă există candidați și nu compară costul celui mai bun split cu costul păstrării unei frunze. Acesta este un constructor didactic, nu o copie completă a constructorului de producție. three-gpu-pathtracer 0.0.23 configurează strategia SAH a three-mesh-bvh. Beneficiul se evaluează împreună cu build time, memorie și distribuția reală a razelor.",
+    "notes": "Compară două plane candidate pe puntea reală. Întreabă care ar lăsa cutii mai greu de evitat, apoi verifică valoarea calculată. Echilibrarea numărului de triunghiuri nu este obiectivul în sine. SAH folosește aria suprafeței, nu volumul, ca model de probabilitate pentru o distribuție generală de raze. În constructorul local, punctele folosite la binning sunt centrele AABB-urilor triunghiurilor. Codul continuă împărțirea peste leafSize dacă există candidați și nu compară costul celui mai bun split cu costul păstrării unei frunze. Acesta este un constructor didactic, nu o copie completă a constructorului de producție. three-gpu-pathtracer 0.0.23 configurează strategia SAH a three-mesh-bvh. Beneficiul se evaluează împreună cu build time, memorie și distribuția reală a razelor.",
     "camera": [
       -14,
       15,
@@ -522,7 +523,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "Auriu: nod activ. Cian: primitive candidate. Magenta: closest-hit curent.",
     "code": "const { node, near } = stack.pop()!;\nif (near === null || near > closest) continue;\nif (node.children) {\n  const children = testChildBounds(node.children);\n  children.sort((a,b) => b.near - a.near);\n  stack.push(...children); // near este extras primul\n} else {\n  for (const i of node.indices) {\n    const t = intersectTriangle(o,d,...triangles[i]);\n    if (t !== null && t < closest) closest = t;\n  }\n}",
     "codeLabel": "Traversare closest-hit · fragment prescurtat",
-    "notes": "Pornește manual de la rădăcină și avansează până la prima frunză care produce un hit. Înainte de pasul următor, arată o cutie al cărei tNear depășește tClosest: „Mai poate conține un triunghi mai apropiat?” Nu, fiindcă triunghiurile sunt închise în cutie. Acesta este motivul pentru ordonarea near-first. Stiva LIFO primește copilul îndepărtat înaintea celui apropiat. AABB-urile copiilor sunt testate o singură dată la introducerea în stivă, iar evenimentele arată contoare cumulative. Un hit de cutie nu garantează un hit de triunghi. La final compară cu cele 96 de teste brute force și păstrează vizibile ambele tipuri de teste: testele AABB nu sunt gratuite. La preset-ul Miss nu trebuie să existe triunghi magenta. Distanța hit-ului poate fi comparată cu brute force pe aceeași geometrie. Nu convertim această reducere de teste într-un procent garantat de FPS.",
+    "notes": "Pornește manual de la rădăcină și avansează până la prima frunză care produce un hit. Înainte de pasul următor, arată o cutie al cărei tNear depășește tClosest: „Mai poate conține un triunghi mai apropiat?” Nu, fiindcă triunghiurile sunt închise în cutie. Acesta este motivul pentru ordonarea near-first. Stiva LIFO primește copilul îndepărtat înaintea celui apropiat. AABB-urile copiilor sunt testate o singură dată la introducerea în stivă, iar evenimentele arată contoare cumulative. Un hit de cutie nu garantează un hit de triunghi. La final compară cu toate testele brute force și păstrează vizibile ambele tipuri de teste: testele AABB nu sunt gratuite. La preset-ul Miss nu trebuie să existe triunghi magenta. Distanța hit-ului poate fi comparată cu brute force pe aceeași geometrie. Nu convertim această reducere de teste într-un procent garantat de FPS.",
     "camera": [
       -14,
       15,
@@ -567,7 +568,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "Experiment sintetic de sampling, separat de rendererul scenei.",
     "code": "vec3 sample = tracePath(ray);\nvec3 previous = texelFetch(history, pixel, 0).rgb;\nvec3 average = previous + (sample - previous) / sampleCount;\n// Camera / lumină / material / rezoluție schimbată?\n// sampleCount = 1; history se reconstruiește.",
     "codeLabel": "Acumulare staționară · fragment explicativ",
-    "notes": "Cere o estimare: „De câte ori mărim samples ca să înjumătățim zgomotul?” Compară 4, 16 și 64 în experiment. Tendința statistică este 1/√N, dar o realizare particulară nu trebuie să se îmbunătățească monoton la fiecare pas. Dacă graficul afișează RMSE, el măsoară eroarea experimentului sintetic față de valoarea sa de referință. Nu este un benchmark sau o imagine path-traced a curții. Monte Carlo noise din iluminare este diferit de aliasing-ul contururilor. Acumularea staționară din explorare se resetează la schimbarea camerei și nu implementează reproiecție temporală. Un filtru spațial aplicat pentru afișare nu trebuie reintrodus ca istoric al acumulării brute.",
+    "notes": "Cere o estimare: „De câte ori mărim samples ca să înjumătățim zgomotul?” Compară 4, 16 și 64 în experiment. Tendința statistică este 1/√N, dar o realizare particulară nu trebuie să se îmbunătățească monoton la fiecare pas. Dacă graficul afișează RMSE, el măsoară eroarea experimentului sintetic față de valoarea sa de referință. Nu este un benchmark sau o imagine path-traced a canionului. Monte Carlo noise din iluminare este diferit de aliasing-ul contururilor. Acumularea staționară din explorare se resetează la schimbarea camerei și nu implementează reproiecție temporală. Un filtru spațial aplicat pentru afișare nu trebuie reintrodus ca istoric al acumulării brute.",
     "camera": [
       -8,
       18,
@@ -658,7 +659,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "Contribuție pentru un traseu. Pixelul final este media multor estimări.",
     "code": "// Numai după Start explicit:\nawait finale.prepare();\nfinale.start();\n// La mișcare: rezoluție mică, 2 bounces.\n// După stabilizare: rezoluția aleasă, implicit 8 bounces.\n// Schimbarea estimatorului resetează acumularea.",
     "codeLabel": "Politica explorării opționale",
-    "notes": "Revino la întrebarea din camera cu biroul: „Ce culoare primește pixelul?” Acest traseu aduce β·Le, iar altele pot aduce contribuții diferite sau zero. Schimbarea culorii suprafeței diffuse ar modifica ponderea contribuției. Eliminarea BVH-ului ar modifica numărul testelor, dar trebuie să păstreze același hit. Sampling-ul și denoising-ul afectează variația și reconstrucția imaginii în moduri diferite. Închide lecția înainte de explorare. Curtea poate fi explorată imediat rasterizat. Start path tracing încarcă explicit rendererul 0.0.23, apoi construiește scena și începe acumularea. Nicio inițializare, compilare sau randare path-traced nu se face automat în timpul prezentării. La mișcare, modul real folosește până la 320×180 și două bounces. După aproximativ 400 ms de stabilitate revine la rezoluția configurată și implicit opt bounces, cu resetarea acumulării la schimbarea modului.",
+    "notes": "Revino la întrebarea din camera cu biroul: „Ce culoare primește pixelul?” Acest traseu aduce β·Le, iar altele pot aduce contribuții diferite sau zero. Schimbarea culorii suprafeței diffuse ar modifica ponderea contribuției. Eliminarea BVH-ului ar modifica numărul testelor, dar trebuie să păstreze același hit. Sampling-ul și denoising-ul afectează variația și reconstrucția imaginii în moduri diferite. Închide lecția înainte de explorare. Canionul poate fi explorat imediat rasterizat. Start path tracing încarcă explicit rendererul 0.0.23, apoi construiește scena și începe acumularea. Nicio inițializare, compilare sau randare path-traced nu se face automat în timpul prezentării. La mișcare, modul real folosește până la 320×180 și două bounces. După aproximativ 400 ms de stabilitate revine la rezoluția configurată și implicit opt bounces, cu resetarea acumulării la schimbarea modului.",
     "camera": [
       31,
       12,
@@ -726,7 +727,7 @@ export const beats:Beat[] = [
     "layout": "travel",
     "travel": true,
     "captureTime": 1,
-    "title": "Curtea de pe monitor",
+    "title": "Canionul de pe monitor",
     "intro": "Intrăm în scena pe care vrem să o randăm.",
     "motion": "portal"
   },
@@ -1251,5 +1252,6 @@ export const beats:Beat[] = [
   }
 ];
 
-export const finalView={camera:[10,42,112] as Vec3,target:[12,4,-5] as Vec3};
+applyObservatoryShots(beats);
+export const finalView=observatoryFinalView;
 export const glossary=[["Radiance (L)", "Mărime radiometrică direcțională estimată de integrator și integrată pentru pixel."], ["Throughput (β)", "Ponderea cumulată a unui traseu; include BSDF, cosinus și PDF."], ["BSDF / PDF", "Modelul interacțiunii / densitatea de probabilitate a direcției alese."], ["BVH / AABB", "Ierarhie de volume / cutie aliniată la axele scenei."], ["SPP", "Samples per pixel; număr de estimări de traseu pentru un pixel."], ["Denoising", "Reconstrucție cu un compromis între reducerea varianței și păstrarea detaliilor."]];
