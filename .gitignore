@@ -1,0 +1,33 @@
+# Installed dependencies and reproducible build/QA output
+node_modules/
+dist/
+.build/
+.vite/
+.cache/
+coverage/
+*.tsbuildinfo
+output/*.zip
+
+# Local agent, account and temporary state
+.codex/
+.agents/
+.aws/
+tmp/
+temp/
+.tmp/
+*.log
+.DS_Store
+
+# Credentials and private environment files
+.env
+.env.*
+!.env.example
+.npmrc
+.pypirc
+.netrc
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519

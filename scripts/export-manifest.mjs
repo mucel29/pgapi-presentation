@@ -1,0 +1,11 @@
+import fs from 'node:fs/promises';
+import {chapters,beats,sources,glossary} from '../src/content/chapters.ts';
+import {createTeachingData} from '../src/core/teaching.ts';
+import {accumulationExperiment,slabIntervals} from '../src/core/experiments.ts';
+import {route,glassNormal,insideGlass,outsideGlass} from '../src/core/route.ts';
+import {dot,normalize,sub} from '../src/core/math.ts';
+await fs.mkdir('.build',{recursive:true});const {tree,triangles,traversal,rayOrigin,rayDirection}=createTeachingData();
+const angle=d=>Math.acos(Math.min(1,Math.abs(dot(d,glassNormal))))*180/Math.PI;
+const experiments={accumulation:[1,4,16,64,256].map(n=>accumulationExperiment(n)),slabs:slabIntervals(rayOrigin,rayDirection,tree.min,tree.max),glass:{ior:1.5,incomingAngle:angle(normalize(sub(route[3],route[2]))),insideAngle:angle(insideGlass),exitAngle:angle(outsideGlass)}};
+await fs.writeFile('.build/deck-content.json',JSON.stringify({chapters,beats,sources,glossary,bvh:{tree,triangles,triangleCount:triangles.length,traversal,rayOrigin,rayDirection},experiments},null,2));
+console.log(`Exported ${chapters.length} topics and ${beats.length} beats; no GPU rendering.`);
