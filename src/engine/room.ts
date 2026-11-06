@@ -1,139 +1,150 @@
 import * as T from 'three';
-import {daylightEnvironment} from './lighting';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { rng, type Vec3 } from '../core/math';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import {monitor} from '../core/portal.ts';
+import {type Vec3} from '../core/math.ts';
+import {daylightEnvironment} from './lighting.ts';
 
-export const landmarks = {
-  gpu: [-2.6, 1.78, -0.55] as Vec3,
-  screen: [-1.05, 2.1, -1.01] as Vec3,
-  diffuse: [-0.1, 1.61, 0.58] as Vec3,
-  metal: [1.23, 1.66, 0.05] as Vec3,
-  glass: [2.28, 1.65, -0.65] as Vec3,
-  lamp: [1.68, 3.88, -1.2] as Vec3,
+export const landmarks={
+  gpu:[-2.66,1.76,-.62] as Vec3,
+  screen:[...monitor.center] as Vec3,
+  lamp:[1.66,3.18,-.64] as Vec3,
 };
 
-function woodTexture() {
-  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
-  const ctx = canvas.getContext('2d')!, pixels = ctx.createImageData(512, 512), rand = rng(774);
-  const phases = Array.from({ length: 10 }, () => rand() * 6.28);
-  for (let y = 0; y < 512; y++) for (let x = 0; x < 512; x++) {
-    const grain = Math.sin(y * .32 + Math.sin(x * .012 + phases[0]) * 3 + Math.sin(x * .035) * .6);
-    const fine = Math.sin(y * 1.8 + Math.sin(x * .02 + phases[1]) * 2) * .1;
-    const board = Math.floor(y / 128) * 3;
-    const f = grain * .12 + fine + rand() * .045;
-    const i = (y * 512 + x) * 4;
-    pixels.data[i] = 114 + f * 68 - board; pixels.data[i + 1] = 68 + f * 45 - board;
-    pixels.data[i + 2] = 39 + f * 29 - board; pixels.data[i + 3] = 255;
-  }
-  ctx.putImageData(pixels, 0, 0);
-  const tex = new T.CanvasTexture(canvas); tex.colorSpace = T.SRGBColorSpace;
-  tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(2, 1); tex.anisotropy = 4;
-  return tex;
-}
-
-export function createRoom() {
+export function createRoom(){
   RectAreaLightUniformsLib.init();
-  const scene = new T.Scene(); scene.background = new T.Color('#101e28');
-  scene.fog = new T.Fog('#101e28', 13, 35);
-  const world = new T.Group(); world.name = 'room-prologue'; scene.add(world);
-  const materials: T.MeshStandardMaterial[] = [];
-  const mat = (color: T.ColorRepresentation, roughness = .6, metalness = 0) => {
-    const m = new T.MeshStandardMaterial({ color, roughness, metalness, flatShading:true }); materials.push(m); return m;
+  const scene=new T.Scene();scene.background=new T.Color('#14252c');scene.fog=new T.Fog('#14252c',14,30);
+  const world=new T.Group();world.name='room-prologue';scene.add(world);
+  const materials:T.MeshStandardMaterial[]=[];
+  const mat=(name:string,color:T.ColorRepresentation,roughness=.7,metalness=0)=>{
+    const m=new T.MeshStandardMaterial({name,color,roughness,metalness});materials.push(m);return m;
   };
-  const navy = mat('#182e38'), shell = mat('#d5c7a9', .43), black = mat('#141f25',.3,.55);
-  const metal = mat('#d2b487',.16,1), copper = mat('#b56e44',.29,.85), pcb = mat('#1b6556',.65,.25);
-  const wall = mat('#566b70',.92), floor = mat('#263944',.85), darkWood = mat('#533b2d',.7);
-  const wood = mat('#ffffff',.43); wood.map = woodTexture(); wood.bumpMap = wood.map; wood.bumpScale = .008;
-  const cream = mat('#e5d9bd',.22), orange = mat('#c77a47',.55), teal = mat('#4b9f97',.6);
-  const glass = new T.MeshPhysicalMaterial({color:'#d6f0ed',roughness:.035,metalness:0,transmission:1,ior:1.5,thickness:.9,transparent:true,flatShading:true});
-  materials.push(glass);
-  const emitter = mat('#fff1c9',.4); emitter.emissive.set('#ffd6a1'); emitter.emissiveIntensity = 3;
-  const cyanEmitter = mat('#bbf2df',.2); cyanEmitter.emissive.set('#53d3b0'); cyanEmitter.emissiveIntensity = 1;
+  const charcoal=mat('Graphite enclosure','#252d30',.48,.2),black=mat('Dark fittings','#121c21',.6,.25);
+  const wall=mat('Cool plaster','#35474a',.95),sideWall=mat('Shaded plaster','#25383e',.95),floor=mat('Quiet floor','#343d3c',.92);
+  const walnut=mat('Matte walnut','#735741',.76),endgrain=mat('Desk edge','#514334',.82),cloth=mat('Chair upholstery','#3c4849',.96);
+  const ceramic=mat('Warm ceramic','#b7ad95',.48),brass=mat('Brushed bronze','#a48b65',.42,.7),pcb=mat('GPU board','#304d43',.8,.1);
+  const cream=mat('Keyboard caps','#c8c5b5',.68),rubber=mat('Desk mat','#2b3537',.96),paper=mat('Notebook paper','#b4b3a4',.92);
+  const emitter=mat('Warm lamp diffuser','#f2d5a5',.7);emitter.emissive.set('#ffc58d');emitter.emissiveIntensity=2.2;
+  const windowMat=mat('Evening window','#617f88',.92);windowMat.emissive.set('#618e9a');windowMat.emissiveIntensity=.28;
+  const status=mat('PC status light','#93ada8',.7);status.emissive.set('#719c9b');status.emissiveIntensity=.35;
+  const mesh=(name:string,geometry:T.BufferGeometry,material:T.Material,position:Vec3,parent:T.Object3D=world)=>{
+    const o=new T.Mesh(geometry,material);o.name=name;o.position.set(...position);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;
+  };
+  const box=(name:string,size:Vec3,pos:Vec3,m:T.Material,parent:T.Object3D=world,bevel=0)=>mesh(name,bevel?new RoundedBoxGeometry(...size,1,bevel):new T.BoxGeometry(...size),m,pos,parent);
+  const cyl=(name:string,top:number,bottom:number,height:number,pos:Vec3,m:T.Material,parent:T.Object3D=world,segments=20)=>mesh(name,new T.CylinderGeometry(top,bottom,height,segments),m,pos,parent);
+  const rod=(name:string,a:Vec3,b:Vec3,r:number,m:T.Material,parent:T.Object3D=world)=>{
+    const av=new T.Vector3(...a),bv=new T.Vector3(...b),o=cyl(name,r,r,av.distanceTo(bv),av.clone().add(bv).multiplyScalar(.5).toArray() as Vec3,m,parent,12);
+    o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),bv.sub(av).normalize());return o;
+  };
 
-  const mesh = (geo:T.BufferGeometry,m:T.Material,pos:Vec3,parent:T.Object3D=world) => {
-    const o = new T.Mesh(geo,m); o.position.set(...pos); o.castShadow = true; o.receiveShadow = true; parent.add(o); return o;
-  };
-  const box = (size:Vec3,pos:Vec3,m:T.Material,parent:T.Object3D=world,bevel=.035) => mesh(new RoundedBoxGeometry(...size,2,bevel),m,pos,parent);
-  const cylinder = (rt:number,rb:number,h:number,pos:Vec3,m:T.Material,parent:T.Object3D=world,segments=32) => mesh(new T.CylinderGeometry(rt,rb,h,segments),m,pos,parent);
-  const sphere = (r:number,pos:Vec3,m:T.Material) => mesh(new T.SphereGeometry(r,40,24),m,pos);
-  // Architectural shell: open front and right, allowing the observer to follow the ray.
-  box([18,.16,17],[0,-1.35,0],floor);
-  box([18,10,.16],[0,3.6,-4.1],wall);
-  box([.16,10,17],[-6.0,3.6,0],navy);
-  box([17,.12,.12],[1,-1.14,-3.95],black);
-  // Window and slatted frame on the back wall.
-  const windowMat = mat('#75b5c3',.7); windowMat.emissive.set('#4b8193'); windowMat.emissiveIntensity=.35;
-  box([3.2,3.4,.12],[3.65,3.1,-3.93],black);
-  box([2.92,3.1,.08],[3.65,3.1,-3.84],windowMat);
-  for(let i=0;i<8;i++) box([3.1,.055,.15],[3.65,1.8+i*.38,-3.7],navy);
-  box([.08,3.2,.17],[3.65,3.1,-3.7],navy);
-  // Desk, bevels and structural frame.
-  box([7.7,.22,4.0],[0,.96,-.2],wood,world,.065);
-  box([7.2,.19,3.45],[0,.77,-.2],darkWood);
-  for(const x of [-3.3,3.3]) for(const z of [-1.6,1.2]) box([.16,2.05,.16],[x,-.36,z],black);
-  box([6.7,.09,.09],[0,-.95,-1.6],black);
-  // PC tower: a cutaway enclosure, GPU and two visible fans.
-  const pc = new T.Group(); pc.position.set(-2.65,1.08,-.9); world.add(pc); pc.name='GPU cutaway';
-  box([1.25,.10,1.65],[0,.04,0],black,pc);
-  box([1.25,.10,1.65],[0,1.94,0],navy,pc);
-  box([1.25,1.9,.08],[0,1.0,-.81],navy,pc);
-  box([.08,1.9,1.65],[-.59,1.0,0],navy,pc);
-  for(const x of [-.56,.56]) box([.045,1.9,.045],[x,1.0,.79],copper,pc,.005);
-  box([1.06,1.59,.055],[0,1.03,-.7],pcb,pc);
-  for(let i=0;i<4;i++) box([.08,.56,.07],[-.39+i*.13,1.36,-.63],black,pc,.005);
-  box([.42,.40,.12],[.2,1.35,-.59],metal,pc);
-  box([1.07,.17,1.16],[0,.75,-.08],black,pc);
-  box([1.02,.035,1.2],[0,.87,-.08],pcb,pc,.005);
-  for(const x of [-.29,.29]) {
-    const fan = cylinder(.24,.24,.08,[x,.9,.0],black,pc,24); fan.rotation.x=Math.PI/2;
-    // Visible fan faces are at the open front of the enclosure.
-    const ring = mesh(new T.TorusGeometry(.225,.016,6,28),copper,[x,.75,.56],pc);
-    for(let b=0;b<7;b++) { const blade=box([.045,.19,.025],[x+Math.cos(b*.897)*.09,.75+Math.sin(b*.897)*.09,.58],black,pc,.008);blade.rotation.z=-b*.897+.35; }
-    mesh(new T.SphereGeometry(.045,12,8),metal,[x,.75,.61],pc);
-    ring.name='GPU fan';
+  // The room opens toward the observer. Broad surfaces support the monitor silhouette.
+  box('Floor',[13,.14,13],[0,-.94,.8],floor);
+  box('Back wall',[13,7,.16],[0,2.48,-3.5],wall);
+  box('Left wall',[.16,7,13],[-4.7,2.48,.8],sideWall);
+  box('Back skirting',[12.9,.16,.07],[0,-.75,-3.37],black);
+  // A single tall window gives a cool counterlight, without a striped backdrop.
+  box('Window recess',[2.05,3.9,.11],[3.45,2.45,-3.36],black);
+  box('Window glass',[1.82,3.65,.035],[3.45,2.45,-3.285],windowMat);
+  box('Window mullion',[.055,3.65,.07],[3.65,2.45,-3.24],charcoal);
+  box('Window sill',[2.23,.11,.35],[3.45,.49,-3.19],ceramic);
+  // The side return is foreground architecture, outside the monitor approach corridor.
+  box('Right doorway return',[.22,6.5,1.15],[4.65,2.23,4.25],sideWall);
+
+  // No high-frequency texture: the tabletop is read by its edge and warm grazing light.
+  box('Desktop',[6.25,.18,2.9],[-.3,.97,-.12],walnut,world,.055);
+  box('Desktop apron',[6.05,.16,2.65],[-.3,.82,-.12],endgrain);
+  for(const x of [-3.06,2.46]){
+    box('Desk trestle',[.12,1.62,2.25],[x,-.02,-.12],charcoal);
+    box('Trestle foot',[.44,.10,2.40],[x,-.82,-.12],black,world,.025);
   }
-  for(let i=0;i<9;i++) box([.07,.035,.25],[-.43+i*.105,.62,.12],copper,pc,.004);
-  box([.88,.05,.025],[0,.96,.55],cyanEmitter,pc,.005);
-  // Monitor and its stand.
-  box([.62,.07,.45],[-1.02,1.11,-1.37],black);
-  box([.13,.53,.15],[-1.02,1.38,-1.43],shell);
-  const monitor = box([2.0,1.45,.30],[-1.02,2.12,-1.28],shell,world,.075);monitor.name='Virtual image plane';
-  box([1.78,1.18,.07],[-1.02,2.15,-1.09],black);
-  const display = new T.MeshBasicMaterial({color:0xffffff,toneMapped:false});
-  const screen=mesh(new T.PlaneGeometry(1.66,1.06),display,[-1.02,2.16,-1.047]);
-  sphere(.022,[-.27,1.49,-1.105],cyanEmitter);
-  // Keyboard and precision mouse.
-  box([1.85,.075,.63],[-1.12,1.115,-.33],shell,world,.035);
-  for(let row=0;row<4;row++) for(let col=0;col<14;col++) box([.10,.045,.10],[-1.92+col*.122,1.175,-.55+row*.137],row===3&&col>3&&col<9?navy:cream,world,.012);
-  box([.34,.14,.5],[.25,1.17,-.5],shell,world,.07);
-  // Articulated desk lamp. Both the visible emitter and the actual area light share placement.
-  cylinder(.36,.40,.09,[2.85,1.11,-1.65],black);
-  const rod = (a:Vec3,b:Vec3,r=.035) => { const av=new T.Vector3(...a),bv=new T.Vector3(...b),o=cylinder(r,r,av.distanceTo(bv),av.clone().add(bv).multiplyScalar(.5).toArray() as Vec3,copper);o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),bv.sub(av).normalize());return o; };
-  rod([2.85,1.15,-1.65],[2.85,3.1,-1.65],.045);
-  rod([2.85,3.1,-1.65],[1.68,3.92,-1.2],.045);
-  for(const p of [[2.85,3.1,-1.65],[1.68,3.92,-1.2]] as Vec3[]) sphere(.09,p,metal);
-  box([1.52,.15,.65],[1.68,3.96,-1.2],black,world,.04);
-  box([1.35,.025,.53],[1.68,3.87,-1.2],emitter,world,.01);
-  const area = new T.RectAreaLight('#ffddad',14,1.35,.53);area.position.set(1.68,3.85,-1.2);area.lookAt(.5,1,0);scene.add(area);
-  // Practical room props give the final rendering texture, scale and indirect color.
-  box([.9,.07,.65],[2.6,1.13,1.1],navy);
-  for(let i=0;i<3;i++) box([.88,.10,.62],[2.6,1.21+i*.11,1.1],i===1?orange:cream);
-  const mug=cylinder(.19,.16,.42,[-2.4,1.3,1.0],cream);
-  const handle=mesh(new T.TorusGeometry(.14,.045,10,24),cream,[-2.18,1.31,1.0]);handle.rotation.y=Math.PI/2;
-  cylinder(.167,.167,.01,[-2.4,1.515,1.0],mat('#35251d',.18));mug.name='Ceramic mug';
-  // A small plant, deliberately geometric during the journey.
-  cylinder(.23,.17,.40,[-3.08,1.28,1.05],teal);
-  const leaf=mat('#54755b',.75);
-  for(let i=0;i<8;i++) { const a=i*.785;const l=mesh(new T.SphereGeometry(.2,10,7),leaf,[-3.08+Math.cos(a)*.15,1.65+(i%3)*.08,1.05+Math.sin(a)*.15]);l.scale.set(.5,1.6,.35);l.rotation.z=Math.sin(a)*.6; }
-  const hemi=new T.HemisphereLight('#b9d9e4','#665244',2.8);scene.add(hemi);
-  const key=new T.DirectionalLight('#ffe6c4',2.4);key.position.set(-1,7,5);key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-6;key.shadow.camera.right=6;key.shadow.camera.top=6;key.shadow.camera.bottom=-6;key.shadow.normalBias=.035;scene.add(key);
-  const fill=new T.RectAreaLight('#c2e5f1',7,4,3);fill.position.set(3.5,4.2,-3.55);fill.lookAt(0,1.5,0);scene.add(fill);
-  const bounce=new T.PointLight('#ffd4a2',7,10,2);bounce.position.set(1.5,3.5,2);scene.add(bounce);
-  scene.environment=daylightEnvironment(true);scene.environmentIntensity=.65;
+  box('Rear stretcher',[5.5,.10,.10],[-.3,-.46,-1.15],charcoal);
+  box('Cable tray',[2.8,.13,.32],[-.6,.69,-1.21],black);
+
+  // An ordinary cutaway tower: enough structure to read the GPU without neon accents.
+  const pc=new T.Group();pc.name='Open PC with GPU';pc.position.set(-2.65,1.065,-.74);world.add(pc);
+  box('PC base',[1.18,.09,1.40],[0,.045,0],charcoal,pc,.025);
+  box('PC roof',[1.18,.09,1.40],[0,1.76,0],charcoal,pc,.025);
+  box('PC rear',[1.18,1.72,.07],[0,.91,-.665],charcoal,pc);
+  box('PC left wall',[.065,1.72,1.40],[-.56,.91,0],charcoal,pc);
+  for(const x of [-.55,.55])box('Front corner post',[.045,1.72,.045],[x,.91,.665],black,pc);
+  box('Motherboard',[1.02,1.37,.035],[0,1.00,-.61],pcb,pc);
+  box('CPU heat sink',[.38,.42,.22],[.21,1.23,-.47],brass,pc);
+  for(let i=0;i<3;i++)box('Memory module',[.065,.51,.05],[-.38+i*.115,1.24,-.55],black,pc);
+  box('Power supply',[.98,.32,.72],[0,.25,-.15],black,pc);
+  box('GPU shroud',[1.02,.36,.19],[0,.75,.47],charcoal,pc,.025);
+  box('GPU board',[1.04,.045,.83],[0,.94,.13],pcb,pc);
+  for(let i=0;i<7;i++)box('GPU heat-sink fin',[.08,.10,.38],[-.35+i*.116,.65,.18],brass,pc);
+  for(const x of [-.27,.27]){
+    const ring=mesh('GPU fan ring',new T.TorusGeometry(.205,.018,5,20),black,[x,.75,.584],pc);
+    for(let b=0;b<5;b++){
+      const a=b*Math.PI*2/5,blade=box('GPU fan blade',[.055,.16,.018],[x+Math.cos(a)*.09,.75+Math.sin(a)*.09,.59],black,pc,.008);blade.rotation.z=-a+.4;
+    }
+    mesh('GPU fan hub',new T.SphereGeometry(.045,10,6),brass,[x,.75,.61],pc);
+    ring.castShadow=false;
+  }
+  box('PC power indicator',[.026,.026,.012],[.47,1.61,.697],status,pc);
+  // One broad cable bend is readable at low raster resolution.
+  rod('GPU cable',[.43,.84,.37],[.46,.48,.28],.025,black,pc);
+
+  // Screen placement is a shared geometric contract with the portal camera.
+  const [sx,sy,sz]=monitor.center,w=monitor.width,h=monitor.height;
+  box('Monitor foot',[.66,.065,.45],[sx,1.095,sz-.12],black,world,.025);
+  box('Monitor riser',[.115,.58,.12],[sx,1.39,sz-.18],charcoal,world,.015);
+  box('Monitor back',[w+.22,h+.23,.16],[sx,sy,sz-.115],charcoal,world,.045);
+  // Four separate rails leave the entire active rectangle open, including oblique views.
+  const rail=.075,gap=.018;
+  box('Bezel left',[rail,h+rail*2+gap*2,.035],[sx-w/2-gap-rail/2,sy,sz-.022],black);
+  box('Bezel right',[rail,h+rail*2+gap*2,.035],[sx+w/2+gap+rail/2,sy,sz-.022],black);
+  box('Bezel top',[w+gap*2,rail,.035],[sx,sy+h/2+gap+rail/2,sz-.022],black);
+  box('Bezel bottom',[w+gap*2,rail,.035],[sx,sy-h/2-gap-rail/2,sz-.022],black);
+  const display=new T.MeshBasicMaterial({color:0xffffff,toneMapped:false});
+  const screen=mesh('Portal active screen',new T.PlaneGeometry(w,h),display,[sx,sy,sz]);screen.castShadow=false;screen.receiveShadow=false;
+
+  box('Desk mat',[2.68,.025,1.05],[-.77,1.075,.06],rubber,world,.045);
+  box('Keyboard base',[1.78,.07,.56],[-1.05,1.12,-.035],charcoal,world,.025);
+  const keyGeometry=new T.BoxGeometry(.105,.025,.09);
+  for(let row=0;row<4;row++)for(let col=0;col<12;col++)mesh('Keyboard key',keyGeometry,cream,[-1.73+col*.124,1.166,-.23+row*.123]);
+  box('Space bar',[.53,.025,.09],[-1.06,1.166,.27],cream,world,.008);
+  box('Mouse',[.27,.115,.41],[.12,1.145,.04],ceramic,world,.065);
+
+  // A warm practical, kept low and to the right so it never crowds the portal.
+  cyl('Lamp base',.27,.31,.07,[2.07,1.10,-.69],black);
+  rod('Lamp lower arm',[2.07,1.13,-.69],[2.22,2.38,-.73],.035,charcoal);
+  rod('Lamp upper arm',[2.22,2.38,-.73],[1.61,3.14,-.64],.035,charcoal);
+  mesh('Lamp hinge',new T.SphereGeometry(.075,12,8),brass,[2.22,2.38,-.73]);
+  const shade=cyl('Task lamp shade',.17,.35,.22,[1.61,3.12,-.64],charcoal);shade.rotation.z=-.15;
+  cyl('Lamp diffuser',.30,.30,.012,[1.61,3.005,-.64],emitter);
+  const practical=new T.RectAreaLight('#ffd1a0',8,.58,.40);practical.position.set(1.61,2.97,-.64);practical.lookAt(1.08,1,.35);scene.add(practical);
+
+  // One personal object and one work object establish scale, leaving the desk open.
+  const mug=cyl('Ceramic mug',.16,.135,.32,[-2.26,1.235,.73],ceramic);
+  const rim=mesh('Mug rim',new T.TorusGeometry(.147,.014,6,24),ceramic,[-2.26,1.399,.73]);rim.rotation.x=Math.PI/2;
+  const handle=mesh('Mug handle',new T.TorusGeometry(.105,.027,7,18),ceramic,[-2.06,1.26,.73]);handle.rotation.y=Math.PI/2;
+  cyl('Coffee',.13,.13,.009,[-2.26,1.385,.73],mat('Coffee','#332c24',.4));mug.castShadow=true;
+  box('Notebook lower cover',[.62,.012,.84],[1.69,1.067,.64],charcoal,world,.008);
+  box('Notebook page block',[.57,.033,.79],[1.69,1.090,.64],paper);
+  box('Notebook upper cover',[.62,.012,.84],[1.69,1.112,.64],charcoal,world,.008);
+
+  // Foreground chair sits below the monitor sightline and stays outside the push-in lane.
+  const chair=new T.Group();chair.name='Foreground chair';chair.position.set(1.97,0,2.12);chair.rotation.y=-.22;world.add(chair);
+  box('Chair seat',[1.34,.18,1.18],[0,.17,0],cloth,chair,.09);
+  box('Chair back',[1.36,1.26,.16],[0,.94,.50],cloth,chair,.10);
+  for(const x of [-.49,.49])rod('Chair back support',[x,.03,.43],[x,1.44,.53],.03,charcoal,chair);
+  cyl('Chair pedestal',.075,.075,.83,[0,-.34,0],charcoal,chair,12);
+  for(let i=0;i<5;i++){
+    const a=i*Math.PI*2/5;rod('Chair base spoke',[0,-.75,0],[Math.cos(a)*.64,-.75,Math.sin(a)*.64],.045,charcoal,chair);
+    cyl('Chair caster',.075,.075,.10,[Math.cos(a)*.64,-.83,Math.sin(a)*.64],black,chair,10);
+  }
+
+  const hemi=new T.HemisphereLight('#a8c4cc','#675445',1.15);scene.add(hemi);
+  const key=new T.DirectionalLight('#e5d6bd',1.55);key.position.set(1,6,4);key.target.position.set(-.7,1,-.3);scene.add(key.target);key.castShadow=true;key.shadow.mapSize.set(1024,1024);Object.assign(key.shadow.camera,{left:-4.5,right:4.5,top:4.5,bottom:-4.5,near:.5,far:15});key.shadow.normalBias=.025;key.shadow.bias=-.0001;scene.add(key);
+  const cool=new T.RectAreaLight('#a2c6d3',4.5,1.65,3.4);cool.position.set(3.45,2.45,-3.18);cool.lookAt(-1.1,1.5,1.3);scene.add(cool);
+  const monitorSpill=new T.PointLight('#99b6b8',1.1,3.7,2);monitorSpill.position.set(sx,sy,sz+.4);scene.add(monitorSpill);
+  const lampBounce=new T.PointLight('#f4c28e',2.4,4.8,2);lampBounce.position.set(1.45,2.6,-.35);scene.add(lampBounce);
+  scene.environment=daylightEnvironment(true);scene.environmentIntensity=.28;
   return {scene,world,materials,screen,display,
-    setBeauty(beauty:boolean) { for(const m of materials) {m.flatShading=!beauty;m.needsUpdate=true;} scene.fog=beauty?null:new T.Fog('#101e28',13,35); },
+    setBeauty(beauty:boolean){for(const m of materials){m.flatShading=false;m.needsUpdate=true;}scene.fog=beauty?null:new T.Fog('#14252c',14,30);},
   };
 }
-export interface SceneWorld {scene:T.Scene;world:T.Group;materials:T.MeshStandardMaterial[];setBeauty(beauty:boolean):void;}
-export type Room = ReturnType<typeof createRoom>;
+export interface SceneWorld{scene:T.Scene;world:T.Group;materials:T.MeshStandardMaterial[];setBeauty(beauty:boolean):void;}
+export type Room=ReturnType<typeof createRoom>;

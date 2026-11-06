@@ -116,3 +116,15 @@ header>button{min-height:44px}#prev,#next{width:44px;height:44px}
  body[data-chapter=samples] #scene-caption{position:relative;top:auto}
 }
 #sample-budget .budget-note{display:block;margin-top:7px;font-size:12px;color:#a2bfb0}
+/* Travel is a scene, with the arrival caption returning after the camera parks. */
+body[data-layout=travel] #chapter{transition:opacity .28s ease,transform .28s ease}
+body[data-layout=travel].is-moving #chapter{opacity:0;transform:translateY(10px);pointer-events:none}
+body[data-layout=travel].is-moving .shade{background:linear-gradient(0deg,#08191b55,transparent 35%)}
+#material-panel{top:auto;bottom:100px;width:43vw;max-width:680px;border-top:1px solid #83cdd080;background:#0a2228d9;padding:17px 20px}
+#material-panel:not(.answered) #glass-figure{display:none}
+#material-panel .eyebrow{margin-bottom:14px}
+#material-panel.answered #glass-figure svg{max-height:220px}
+#material-panel #glass-answer{font-size:18px}
+@media(max-height:700px) and (min-width:901px){#material-panel{bottom:80px;padding:14px 18px}#material-panel.answered #glass-figure svg{max-height:160px}#material-panel #glass-answer{font-size:16px}}
+@media(max-width:900px){#material-panel{position:relative;top:auto;bottom:auto;width:auto;max-width:none;margin:26vh 5vw 0;padding:16px}#material-panel.answered #glass-figure svg{max-height:260px}}
+@media(prefers-reduced-motion:reduce){body[data-layout=travel] #chapter{transition:none}}

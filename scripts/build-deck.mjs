@@ -14,7 +14,7 @@ function line(s,x,y,xx,yy,color=C.line,width=2){return s.shapes.add({geometry:'l
 function arrow(s,x,y,xx,yy,color=C.gold,width=3){line(s,x,y,xx,yy,color,width);const a=Math.atan2(yy-y,xx-x),r=12;for(const d of [-.45,.45])line(s,xx,yy,xx-r*Math.cos(a+d),yy-r*Math.sin(a+d),color,width);}
 function dot(s,x,y,color=C.ink,r=5){return s.shapes.add({geometry:'ellipse',position:{left:x-r,top:y-r,width:r*2,height:r*2},fill:color,line:{fill:'none',width:0}});}
 function poly(s,pts,fill='none',stroke=C.cyan,width=2,close=true){const minX=Math.min(...pts.map(p=>p[0])),minY=Math.min(...pts.map(p=>p[1])),w=Math.max(1,Math.max(...pts.map(p=>p[0]))-minX),h=Math.max(1,Math.max(...pts.map(p=>p[1]))-minY);return s.shapes.add({geometry:'custom',position:{left:minX,top:minY,width:w,height:h},fill,line:{fill:stroke,width},customPaths:[{width:w,height:h,commands:[{moveTo:{x:pts[0][0]-minX,y:pts[0][1]-minY}},...pts.slice(1).map(p=>({lineTo:{x:p[0]-minX,y:p[1]-minY}})),...(close?[{close:{}}]:[])]}]});}
-async function image(s,id,x,y,w,h){s.images.add({blob:await fs.readFile(`assets/captures/${id}.jpg`),contentType:'image/jpeg',position:{left:x,top:y,width:w,height:h},fit:'cover',alt:`Scenă procedurală rasterizată: ${id}`});}
+async function image(s,id,x,y,w,h){s.images.add({blob:await fs.readFile(`.build/cinematic-review/${id}.png`),contentType:'image/png',position:{left:x,top:y,width:w,height:h},fit:'contain',alt:`Proiecție CPU a geometriei actuale: ${id}; fără iluminare/reflexii WebGL`});}
 function header(s,n,label){s.background.fill=C.bg;text(s,label,54,35,1100,24,14,C.cyan,true,mono);line(s,54,676,1226,676);text(s,`${String(n).padStart(2,'0')} / 17`,1130,690,96,17,11,C.quiet,false,mono);}
 function title(s,t){text(s,t,54,85,1172,72,43,C.ink,true);}
 function left(s,c,{formula=true}={}){text(s,c.slide.intro,54,190,454,112,28,C.muted);let y=326;for(const p of c.slide.points){text(s,'›',54,y,18,36,26,C.gold);text(s,p,82,y,424,82,24);y+=100;}if(formula&&c.slide.formula)text(s,c.slide.formula,54,560,460,80,21,C.gold,false,mono);}
@@ -28,7 +28,7 @@ const near=n=>Math.max(0,...[0,1,2].map(a=>Math.min((n.min[a]-bvh.rayOrigin[a])/
 for(const [i,c] of chapters.entries()){
  const s=presentation.slides.add();header(s,i+1,c.section);title(s,c.slide.title);
  if(c.id==='room'){
-  text(s,c.slide.intro,54,220,460,150,36,C.gold);await image(s,'room',572,183,654,369);
+  text(s,c.slide.intro,54,220,460,150,36,C.gold);await image(s,'portal-0',572,183,654,369);caption(s,'Geometrie actuală · proiecție CPU, fără iluminare WebGL',572,565,654);
   text(s,'Intersecții, materiale și accelerare cu BVH',54,470,455,100,25,C.muted);
   text(s,'Programare grafică avansată și prelucrarea imaginilor',54,609,1172,37,20,C.muted);
  }else if(c.id==='ray'){
@@ -41,7 +41,7 @@ for(const [i,c] of chapters.entries()){
   arrow(s,727,230,...P,C.green);dot(s,...P,C.green,7);dot(s,...M,C.red,7);text(s,'A',598,531,45,35,24);text(s,'B',1168,531,45,35,24);text(s,'C',782,193,45,35,24);text(s,'P · HIT',834,429,200,35,21,C.green);text(s,'MISS',1112,337,110,35,21,C.red);
   text(s,'u = 0.25 · v = 0.35',635,576,580,30,21,C.cyan,false,mono);caption(s,'În afara triunghiului, deși punctul se află în plan.',584,619,640);
  }else if(c.id==='diffuse'){
-  left(s,c);await image(s,'detail-diffuse',584,187,642,350);text(s,'20 de direcții cosine-weighted',584,565,642,36,23,C.cyan);caption(s,'Evantai de alternative; un singur segment continuă traseul.',584,615,642);
+  left(s,c);line(s,610,522,1200,522,C.line,3);arrow(s,884,520,884,235,C.cyan,3);text(s,'n',898,234,70,40,24,C.cyan,false,mono);for(const d of experiments.diffuse)arrow(s,884,520,884+d[0]*230+d[2]*55,520-d[1]*245,C.gold,2);dot(s,884,520,C.ink,7);text(s,'20 de direcții cosine-weighted',584,565,642,36,23,C.cyan);caption(s,'Schemă locală · alternative pentru un singur bounce',584,615,642);
  }else if(c.id==='materials'){
   left(s,c);const x0=825,x1=955,y0=345,theta=experiments.glass.incomingAngle*Math.PI/180,phi=experiments.glass.insideAngle*Math.PI/180,y1=y0+130*Math.tan(phi);
   rect(s,x0,215,x1-x0,340,'#234C54',C.cyan);text(s,'aer',648,215,150,34,23);text(s,'n = 1.5',831,176,180,34,21,C.cyan,false,mono);text(s,'aer',1055,215,120,34,23);
@@ -63,7 +63,7 @@ for(const [i,c] of chapters.entries()){
   line(s,54,456,1226,456);text(s,'Interogări closest-hit',54,491,520,46,30,C.cyan,true);text(s,'Fiecare cere căutarea\ncelui mai apropiat triunghi.',54,551,520,82,26,C.muted);
   text(s,'Teste cu triunghiuri',692,491,534,46,30,C.cyan,true);text(s,'Brute force: numărul razelor\n× numărul triunghiurilor.',692,551,534,82,26,C.muted);text(s,'Traseele pot termina mai devreme. Shadow rays nu sunt incluse.',54,640,1172,27,17,C.quiet);
  }else if(c.id==='bvh'){
-  left(s,c);await image(s,'detail-bvh',584,184,642,190);nativeTree(s,bvh.tree,905,421,160,2);caption(s,'96 de triunghiuri · aceleași grupuri în arbore și în scenă',584,625,642);
+  left(s,c);await image(s,'arrival-bvh',584,174,642,210);text(s,'Proiecție CPU · arc structural în curtea actuală',584,383,642,30,16,C.quiet);nativeTree(s,bvh.tree,905,444,160,2);caption(s,'96 de triunghiuri · grupuri din geometria reală',584,641,642);
  }else if(c.id==='sah'){
   left(s,c,{formula:false});text(s,c.slide.formula,54,561,500,85,20,C.gold,false,mono);text(s,'Trei candidați pe geometria arcului',584,187,642,48,25,C.cyan,true);
   shownCandidates.forEach((p,j)=>{const y=268+j*104;const color=j===0?C.gold:C.cyan;text(s,`${'XYZ'[p.axis]} = ${p.plane.toFixed(2)}`,584,y,265,34,21,C.muted,false,mono);text(s,`${p.left}/${p.right} triunghiuri`,885,y,330,34,20,C.quiet);rect(s,584,y+43,p.cost/96*500,20,color);text(s,p.cost.toFixed(1),1112,y+37,100,40,23,color,true,mono);});
@@ -85,11 +85,12 @@ for(const [i,c] of chapters.entries()){
   left(s,c);const x=595,y=235,cell=62;for(let row=0;row<5;row++)for(let col=0;col<5;col++)rect(s,x+col*cell,y+row*cell,cell-4,cell-4,col<3?'#548A85':'#AD7A51');line(s,x+3*cell-2,y-12,x+3*cell-2,y+5*cell-4,C.ink,3);dot(s,x+cell*2.5-2,y+cell*2.5-2,C.gold,11);arrow(s,x+2.5*cell,y+2.5*cell,x+3.5*cell,y+2.5*cell,C.red,4);
   text(s,'Altă suprafață',935,293,270,65,25,C.red,true);text(s,'Normal\nDepth\nAlbedo',954,390,260,123,25,C.muted);caption(s,'Ghidajele reduc ponderea vecinului incompatibil.',584,591,642);text(s,'Filtru spațial · acumulare brută separată',584,634,642,30,20,C.cyan);
  }else if(c.id==='light'){
-  left(s,c);await image(s,'final',584,184,642,361);text(s,'Curtea rămâne disponibilă pentru explorare',584,577,642,40,25,C.gold,true);caption(s,'Explorarea începe rasterizat. Path tracing cere Start explicit.',584,631,642);
+  left(s,c);await image(s,'arrival-light',584,184,642,361);text(s,'Geometria curții · proiecție CPU',584,577,642,40,25,C.gold,true);caption(s,'Explorarea începe rasterizat. Path tracing cere Start explicit.',584,631,642);
  }
  const travel=beats.filter(b=>b.chapter===c.id&&b.travel).map(b=>`${b.title}: ${b.intro}`).join('\n');
  s.speakerNotes.text=`${c.intro}\n\n${c.points.join('\n\n')}\n\n${c.formula}\n${c.formulaNote}\n\n${c.notes}\n\n${c.codeLabel}\n${c.code}\n\nCod: ${c.codeSource}\n\nSurse:\n${c.sources.join('\n')}${travel?'\n\nTranziții în prezentarea live:\n'+travel:''}\n\nDurată orientativă: ${c.duration}.`;
- if(['room','diffuse','bvh','light'].includes(c.id))s.speakerNotes.text+='\n\nImagine: captură rasterizată a scenei procedurale locale.';
+ if(['room','bvh','light'].includes(c.id))s.speakerNotes.text+='\n\nImagine: proiecție CPU a geometriei actuale și a pozițiilor de cameră din Beat/shotPose. Nu este o captură de browser și nu reproduce iluminarea, reflexiile sau transmisia WebGL. Sursa: scripts/render-cinematic-proof.mjs.';
+ if(c.id==='diffuse')s.speakerNotes.text+='\n\nDiagramă locală editabilă: 20 de direcții generate cu cosineHemisphere din src/core/math.ts. Nu reprezintă toate ramurile unui path sau o captură a scenei.';
  if(c.id==='noise')s.speakerNotes.text+='\n\nExperiment Bernoulli sintetic, seed 4279, grilă 20×12. Media fiecărui pixel este comparată cu semnalul de probabilitate cunoscut. RMSE-urile afișate provin din src/core/experiments.ts și nu măsoară scena WebGL.';
  if(c.id==='traversal')s.speakerNotes.text+=`\n\nRaza implicită: primul hit în N${bvh.traversal.events.find(e=>e.triangle>=0).node.id}, apoi N${bvh.traversal.events.find(e=>e.status==='pruned').node.id} este eliminat. Numărătoarea finală este de ${bvh.traversal.triangleTests} teste cu triunghiuri și ${bvh.traversal.boxTests} teste AABB.`;
  console.log(`Authored ${i+1}/15`);
@@ -106,8 +107,8 @@ for(const [i,c] of chapters.entries()){
  const s=presentation.slides.add();header(s,17,'ANEXĂ · BIBLIOGRAFIE');title(s,'Surse și implementări');
  const refs=[['Möller & Trumbore · 1997','https://doi.org/10.1080/10867651.1997.10487468'],['Ray Tracing in One Weekend',sources.weekend],['Ray Tracing: The Next Week',sources.next],['PBRT · BVH',sources.pbrt],['PBRT · A Better Path Tracer','https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer'],['PBRT · Sampling','https://pbr-book.org/4ed/Sampling_Algorithms/Sampling_Multidimensional_Functions'],['three-gpu-pathtracer · 0.0.23',sources.tracer],['three-mesh-bvh · 0.8.3',sources.meshbvh],['Schied et al. · SVGF',sources.svgf],['NVIDIA NRD',sources.nrd],['Intel Open Image Denoise',sources.oidn]];
  refs.forEach(([t,url],i)=>{const col=i<6?0:1,row=i<6?i:i-6,x=54+col*610,y=177+row*72;const sh=text(s,t,x,y,557,35,22,C.muted);sh.text.set([[{run:t,link:{uri:url,isExternal:true}}]]);text(s,new URL(url).hostname,x,y+35,557,26,16,C.cyan,false,mono);});
- text(s,'Geometrie procedurală și capturi locale · biblioteci MIT · fonturi DejaVu',54,618,1172,38,19,C.quiet);
- s.speakerNotes.text=refs.map(([a,b])=>a+'\n'+b).join('\n\n')+'\n\nMaterialul de pornire\n'+sources.reference+'\n\nGeometria, texturile și capturile scenei sunt procedurale și locale. Diagramele, contoarele, formulele și codul sunt obiecte editabile. Three.js, three-mesh-bvh și three-gpu-pathtracer: MIT. Fonturi DejaVu incluse local. Graficele de sampling sunt un experiment sintetic separat de path tracing. SVGF, NRD și OIDN sunt surse de context, nu integrări ale proiectului.';
+ text(s,'Geometrie procedurală · proiecții CPU · biblioteci MIT · fonturi DejaVu',54,618,1172,38,19,C.quiet);
+ s.speakerNotes.text=refs.map(([a,b])=>a+'\n'+b).join('\n\n')+'\n\nMaterialul de pornire\n'+sources.reference+'\n\nGeometria scenei este procedurală și locală. Imaginile spațiului sunt proiecții CPU explicite, nu capturi WebGL. Diagramele, contoarele, formulele și codul sunt obiecte editabile. Three.js, three-mesh-bvh și three-gpu-pathtracer: MIT. Fonturi DejaVu incluse local. Graficele de sampling sunt un experiment sintetic separat de path tracing. SVGF, NRD și OIDN sunt surse de context, nu integrări ale proiectului.';
 }
 await(await PresentationFile.exportPptx(presentation)).save('.build/candidate.pptx');
 const renderSlides=process.env.DECK_RENDER_SLIDES?.split(',').map(Number);

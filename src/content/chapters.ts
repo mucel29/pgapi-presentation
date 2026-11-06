@@ -2,7 +2,8 @@ import type {Vec3} from '../core/math';
 export type Layout='scene'|'technical'|'travel';
 export interface SlideCopy {title:string;intro:string;points:string[];formula:string;}
 export interface Chapter {slide:SlideCopy;id:string;section:string;title:string;accent:string;intro:string;points:string[];formula:string;formulaNote:string;code:string;codeLabel:string;codeSource:string;notes:string;sources:string[];camera:Vec3;target:Vec3;visual:string;duration:string;layout:Layout;}
-export interface Beat {id:string;chapter:string;scene:'room'|'courtyard'|'portal';camera:Vec3;target:Vec3;via?:Vec3[];rayFrom:number;rayTo:number;visual:string;seconds:number;layout:Layout;travel:boolean;captureTime:number;captureStep?:number;title?:string;intro?:string;}
+import type {ShotMotion} from '../core/cinematics';
+export interface Beat {motion?:ShotMotion;aimVia?:Vec3[];portraitCamera?:Vec3;portraitTarget?:Vec3;id:string;chapter:string;scene:'room'|'courtyard'|'portal';camera:Vec3;target:Vec3;via?:Vec3[];rayFrom:number;rayTo:number;visual:string;seconds:number;layout:Layout;travel:boolean;captureTime:number;captureStep?:number;title?:string;intro?:string;}
 export const sources = {
   "reference": "https://mucel29.github.io/egc-presentation/",
   "weekend": "https://raytracing.github.io/books/RayTracingInOneWeekend.html",
@@ -687,13 +688,13 @@ export const beats:Beat[] = [
     "scene": "room",
     "camera": [
       2.4,
-      3.5,
+      2.6,
       5.9
     ],
     "target": [
-      -0.8,
-      1.9,
-      -0.8
+      -1.02,
+      2.16,
+      -1.047
     ],
     "rayFrom": 0,
     "rayTo": 0,
@@ -701,116 +702,128 @@ export const beats:Beat[] = [
     "seconds": 0,
     "layout": "scene",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "motion": "hold"
   },
   {
     "id": "portal",
     "chapter": "ray",
     "scene": "portal",
     "camera": [
-      -34,
-      9,
-      33
+      -52,
+      5.5,
+      44
     ],
     "target": [
-      -24,
+      -32,
       4,
-      18
+      -2
     ],
     "rayFrom": 0,
     "rayTo": 0,
     "visual": "room",
-    "seconds": 2.3,
+    "seconds": 4.8,
     "layout": "travel",
     "travel": true,
     "captureTime": 1,
     "title": "Curtea de pe monitor",
-    "intro": "Intrăm în scena pe care vrem să o randăm."
+    "intro": "Intrăm în scena pe care vrem să o randăm.",
+    "motion": "portal"
   },
   {
     "id": "ray",
     "chapter": "ray",
     "scene": "courtyard",
     "camera": [
-      -34,
-      9,
-      33
+      -52,
+      5.5,
+      44
     ],
     "target": [
-      -24,
+      -38,
       4,
-      18
+      19
     ],
     "rayFrom": 0,
-    "rayTo": 0,
+    "rayTo": 0.18,
     "visual": "ray",
-    "seconds": 0.8,
+    "seconds": 2.3,
     "layout": "scene",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "motion": "launch"
   },
   {
     "id": "hit",
     "chapter": "hit",
     "scene": "courtyard",
     "camera": [
-      -28,
-      9,
-      12
+      -43,
+      5.6,
+      10
     ],
     "target": [
-      -20,
+      -32,
       4,
-      1
+      -4
     ],
-    "rayFrom": 0,
+    "rayFrom": 0.18,
     "rayTo": 1,
     "visual": "hit",
-    "seconds": 1.6,
+    "seconds": 3.3,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "via": [
+      [
+        -48,
+        5.3,
+        28
+      ]
+    ],
+    "motion": "launch"
   },
   {
     "id": "diffuse",
     "chapter": "diffuse",
     "scene": "courtyard",
     "camera": [
-      -29,
-      11,
-      18
+      -40,
+      5.7,
+      6
     ],
     "target": [
-      -17,
+      -30,
       4,
-      5
+      -1
     ],
     "rayFrom": 1,
     "rayTo": 1,
     "visual": "diffuse",
-    "seconds": 0.8,
+    "seconds": 1.6,
     "layout": "scene",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "motion": "arrive"
   },
   {
     "id": "to-metal",
     "chapter": "materials",
     "scene": "courtyard",
     "camera": [
-      -5,
-      11,
-      6
+      -2,
+      6.8,
+      12
     ],
     "target": [
-      2,
+      8,
       6,
-      18
+      28
     ],
     "rayFrom": 1,
     "rayTo": 2,
     "visual": "materials",
-    "seconds": 2.5,
+    "seconds": 4.8,
     "layout": "travel",
     "travel": true,
     "captureTime": 1,
@@ -818,68 +831,86 @@ export const beats:Beat[] = [
     "intro": "Continuăm pe direcția selectată la suprafața mată.",
     "via": [
       [
-        -18,
-        11,
-        11
+        -25,
+        5.5,
+        13
+      ],
+      [
+        -13,
+        5.8,
+        20
       ]
-    ]
+    ],
+    "aimVia": [
+      [
+        -22,
+        4,
+        7
+      ],
+      [
+        -5,
+        6,
+        25
+      ]
+    ],
+    "motion": "travel"
   },
   {
     "id": "materials",
     "chapter": "materials",
     "scene": "courtyard",
     "camera": [
-      8,
-      12,
-      4
+      0,
+      6.5,
+      15
     ],
     "target": [
-      2,
+      8,
       6,
-      18
+      28
     ],
     "rayFrom": 2,
     "rayTo": 2,
     "visual": "materials",
-    "seconds": 0.8,
+    "seconds": 1.2,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "motion": "arrive"
   },
   {
     "id": "to-glass",
     "chapter": "materials",
     "scene": "courtyard",
     "camera": [
-      29,
-      11,
-      10
+      39,
+      12,
+      -19
     ],
     "target": [
-      24,
+      51,
       6,
-      -2
+      -12
     ],
     "rayFrom": 2,
-    "rayTo": 4,
+    "rayTo": 4.18,
     "visual": "materials",
-    "seconds": 3.0,
+    "seconds": 6.4,
     "layout": "travel",
     "travel": true,
     "captureTime": 1,
     "title": "Prin placa de sticlă",
     "intro": "Segmentul transmis traversează cele două fețe.",
-    "via": [
-      [
-        12,
-        11,
-        20
-      ],
-      [
-        22,
-        11,
-        10
-      ]
+    "motion": "glass",
+    "portraitCamera": [
+      32,
+      15,
+      -25
+    ],
+    "portraitTarget": [
+      52,
+      6,
+      -13
     ]
   },
   {
@@ -887,246 +918,347 @@ export const beats:Beat[] = [
     "chapter": "samples",
     "scene": "courtyard",
     "camera": [
-      -33,
-      10,
-      34
+      -53,
+      6.5,
+      49
     ],
     "target": [
-      -23,
+      -39,
       4,
-      13
+      22
     ],
-    "rayFrom": 4,
-    "rayTo": 4,
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
     "visual": "samples",
-    "seconds": 0.8,
+    "seconds": 3.2,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "via": [
+      [
+        -10,
+        12,
+        25
+      ],
+      [
+        -35,
+        7,
+        47
+      ]
+    ],
+    "motion": "arrive"
   },
   {
     "id": "loop",
     "chapter": "loop",
     "scene": "courtyard",
     "camera": [
-      -7,
-      17,
-      30
+      25,
+      14,
+      48
     ],
     "target": [
-      4,
+      3,
       5,
       3
     ],
-    "rayFrom": 4,
-    "rayTo": 4,
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
     "visual": "loop",
-    "seconds": 0.8,
+    "seconds": 2.8,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "via": [
+      [
+        -13,
+        10,
+        50
+      ]
+    ],
+    "motion": "arrive"
   },
   {
     "id": "cost",
     "chapter": "cost",
     "scene": "courtyard",
     "camera": [
-      -14,
-      15,
-      18
+      -24,
+      7,
+      -14
     ],
     "target": [
-      -3,
-      5,
-      -15
+      -12,
+      4,
+      -38
     ],
-    "rayFrom": 4,
-    "rayTo": 4,
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
     "visual": "cost",
-    "seconds": 0.8,
+    "seconds": 2.8,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "via": [
+      [
+        -12,
+        14,
+        38
+      ],
+      [
+        -24,
+        10,
+        4
+      ]
+    ],
+    "motion": "arrive"
   },
   {
     "id": "bvh",
     "chapter": "bvh",
     "scene": "courtyard",
     "camera": [
-      -14,
-      15,
-      18
+      -24,
+      7,
+      -14
     ],
     "target": [
-      -3,
-      5,
-      -15
+      -12,
+      4,
+      -38
     ],
-    "rayFrom": 4,
-    "rayTo": 4,
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
     "visual": "bvh",
-    "seconds": 0.8,
+    "seconds": 0,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "motion": "hold"
   },
   {
     "id": "sah",
     "chapter": "sah",
     "scene": "courtyard",
     "camera": [
-      -14,
-      15,
-      18
+      -24,
+      7,
+      -14
     ],
     "target": [
-      -3,
-      5,
-      -15
+      -12,
+      4,
+      -38
     ],
-    "rayFrom": 4,
-    "rayTo": 4,
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
     "visual": "sah",
-    "seconds": 0.8,
+    "seconds": 0,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "motion": "hold"
   },
   {
     "id": "aabb",
     "chapter": "aabb",
     "scene": "courtyard",
     "camera": [
-      -14,
-      15,
-      18
+      -24,
+      7,
+      -14
     ],
     "target": [
-      -3,
-      5,
-      -15
+      -12,
+      4,
+      -38
     ],
-    "rayFrom": 4,
-    "rayTo": 4,
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
     "visual": "aabb",
-    "seconds": 0.8,
+    "seconds": 0,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "motion": "hold"
   },
   {
     "id": "traversal",
     "chapter": "traversal",
     "scene": "courtyard",
     "camera": [
-      -14,
-      15,
-      18
+      -24,
+      7,
+      -14
     ],
     "target": [
-      -3,
-      5,
-      -15
+      -12,
+      4,
+      -38
     ],
-    "rayFrom": 4,
-    "rayTo": 4,
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
     "visual": "traversal",
-    "seconds": 0.8,
+    "seconds": 0,
     "layout": "technical",
     "travel": false,
     "captureTime": 1,
-    "captureStep": 5
+    "captureStep": 5,
+    "motion": "hold"
   },
   {
     "id": "noise",
     "chapter": "noise",
     "scene": "courtyard",
     "camera": [
-      -8,
-      18,
-      37
+      44,
+      7,
+      -14
     ],
     "target": [
-      4,
-      5,
-      -3
+      61,
+      6,
+      -24
     ],
-    "rayFrom": 4,
-    "rayTo": 4,
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
     "visual": "noise",
-    "seconds": 0.8,
+    "seconds": 2.8,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "via": [
+      [
+        12,
+        12,
+        -10
+      ],
+      [
+        33,
+        8,
+        -10
+      ]
+    ],
+    "motion": "arrive"
   },
   {
     "id": "denoise",
     "chapter": "denoise",
     "scene": "courtyard",
     "camera": [
-      -8,
-      18,
-      37
+      44,
+      7,
+      -14
     ],
     "target": [
-      4,
-      5,
-      -3
+      61,
+      6,
+      -24
     ],
-    "rayFrom": 4,
-    "rayTo": 4,
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
     "visual": "denoise",
-    "seconds": 0.8,
+    "seconds": 0,
     "layout": "technical",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "motion": "hold"
   },
   {
     "id": "to-light",
     "chapter": "light",
     "scene": "courtyard",
     "camera": [
-      34,
-      12,
-      -4
+      67,
+      6.2,
+      -29
     ],
     "target": [
-      42,
+      79,
       6,
-      -19
+      -40
     ],
-    "rayFrom": 4,
+    "rayFrom": 4.18,
     "rayTo": 5,
     "visual": "light",
-    "seconds": 2.5,
+    "seconds": 4.8,
     "layout": "travel",
     "travel": true,
     "captureTime": 1,
     "title": "Spre suprafața emisivă",
-    "intro": "Ultimul segment al traseului selectat."
+    "intro": "Ultimul segment al traseului selectat.",
+    "via": [
+      [
+        49,
+        6.8,
+        -13
+      ],
+      [
+        58,
+        6.5,
+        -21
+      ]
+    ],
+    "aimVia": [
+      [
+        61,
+        6,
+        -25
+      ]
+    ],
+    "motion": "travel"
   },
   {
     "id": "light",
     "chapter": "light",
     "scene": "courtyard",
     "camera": [
-      31,
-      12,
-      -5
+      10,
+      42,
+      112
     ],
     "target": [
-      42,
-      6,
-      -19
+      12,
+      4,
+      -5
     ],
     "rayFrom": 5,
     "rayTo": 5,
     "visual": "light",
-    "seconds": 0.8,
+    "seconds": 4.6,
     "layout": "scene",
     "travel": false,
-    "captureTime": 1
+    "captureTime": 1,
+    "via": [
+      [
+        49,
+        8,
+        -14
+      ],
+      [
+        39,
+        18,
+        -23
+      ],
+      [
+        25,
+        24,
+        12
+      ]
+    ],
+    "motion": "arrive",
+    "portraitCamera": [
+      10,
+      60,
+      230
+    ],
+    "portraitTarget": [
+      12,
+      5,
+      -5
+    ]
   }
 ];
-export const finalView={camera:[34,23,43] as Vec3,target:[1,5,-3] as Vec3};
+
+export const finalView={camera:[10,42,112] as Vec3,target:[12,4,-5] as Vec3};
 export const glossary=[["Radiance (L)", "Mărime radiometrică direcțională estimată de integrator și integrată pentru pixel."], ["Throughput (β)", "Ponderea cumulată a unui traseu; include BSDF, cosinus și PDF."], ["BSDF / PDF", "Modelul interacțiunii / densitatea de probabilitate a direcției alese."], ["BVH / AABB", "Ierarhie de volume / cutie aliniată la axele scenei."], ["SPP", "Samples per pixel; număr de estimări de traseu pentru un pixel."], ["Denoising", "Reconstrucție cu un compromis între reducerea varianței și păstrarea detaliilor."]];

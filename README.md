@@ -2,7 +2,13 @@
 
 Prezentare în română pentru Programare grafică avansată și prelucrarea imaginilor: 15 teme, patru secvențe de deplasare, aproximativ 17–19 minute cu opriri pentru demonstrații, urmate de explorare opțională.
 
-Începem într-o cameră cu PC și birou. Intrăm prin monitor într-o curte arhitecturală, unde urmărim o rază între o suprafață difuză, metal, sticlă și o sursă de lumină. Secțiunea BVH folosește cele 96 de triunghiuri ale unui arc din curte.
+Începem la un birou obișnuit, cu PC și monitor. Monitorul arată curtea în mișcare lentă, rasterizată. Intrarea continuă aceeași mișcare în lumea virtuală: un culoar umbrit se deschide spre o curte adâncă, un element difuz din ocru, o foaie de poartă din bronz, un vestibul de sticlă și o cameră retrasă cu lumină caldă. Materialele fac parte din arhitectură. Secțiunea BVH folosește cele 96 de triunghiuri ale arcului structural din spate.
+
+Raza pornește înaintea observatorului. Camera o urmărește pe segmente de aproximativ 41, 50, 55 și 40 de unități, apoi se așază la fiecare demonstrație. La sticlă sunt distincte sosirea, intrarea, ieșirea și continuarea. Navigarea rămâne manuală.
+
+## Checkpoint local
+
+Repository-ul a fost inițializat înaintea redesign-ului. Commit de bază pe `main`: `16531134896fa5bb7044534a3e3c143551875b65` (`chore: checkpoint presentation before scene redesign`). Nu este configurat un remote. Acest checkpoint păstrează versiunea de dinaintea schimbării scenei și tranzițiilor.
 
 ## Pornire locală
 
@@ -63,20 +69,22 @@ Orbit: drag; pan: click dreapta; zoom: scroll; deplasare: W/A/S/D și Q/E; Shift
 
 ## PPTX și capturi
 
-`output/raytracing.pptx`: 16:9, 15 slide-uri principale + două anexe, cu text, formule, cod și diagrame editabile, patru capturi rasterizate ale scenei, note și citări. Include răspunsul pentru placa de sticlă, costuri SAH calculate, intervale slab reale, un pas concret de pruning și experimentul sintetic de convergență. Capturile sunt rasterizate. Fonturile DejaVu sunt incluse în `public/fonts/`; instalează-le pe calculatorul cu PowerPoint pentru aceeași aranjare.
+`output/raytracing.pptx`: 16:9, 15 slide-uri principale + două anexe, cu text, formule, cod și diagrame editabile, trei proiecții CPU explicite ale geometriei actuale, note și citări. Include răspunsul pentru placa de sticlă, costuri SAH calculate, intervale slab reale, un pas concret de pruning și experimentul sintetic de convergență. Proiecțiile CPU nu sunt capturi de browser și nu reproduc iluminarea, reflexiile sau transmisia WebGL. Nicio imagine a scenei vechi nu este prezentată ca rezultat al redesign-ului. Fonturile DejaVu sunt incluse în `public/fonts/`; instalează-le pe calculatorul cu PowerPoint pentru aceeași aranjare.
 
-Manifestul comun este `src/content/chapters.ts`: conținut, note, surse, scene, poziții de cameră și secvențe. Capturi deterministe fără UI: `?capture=diffuse`, `?capture=to-glass`, `?capture=final`. **Inclusiv `final` și vechiul alias `beauty` sunt rasterizate.** Adaugă `&ui=1` pentru capturi cu overlay sau `&phase=0.5` pentru un moment precis din tranziție. Starea `body[data-capture-ready="true"]` indică finalizarea capturii.
+Manifestul comun este `src/content/chapters.ts`: conținut, note, surse și secvențe. Pozițiile de cameră active sunt în `Beat`, iar `src/core/cinematics.ts` calculează `shotPose`, mișcarea razei și intrarea prin monitor. Exportul ignoră câmpurile legacy `Chapter.camera/target` și folosește aceste poziții active. Capturi deterministe fără UI: `?capture=diffuse`, `?capture=to-glass`, `?capture=final`. **Inclusiv `final` și vechiul alias `beauty` sunt rasterizate.** Adaugă `&ui=1` pentru capturi cu overlay sau `&phase=0.5` pentru un moment precis din tranziție. Starea `body[data-capture-ready="true"]` indică finalizarea capturii.
 
 Pentru regenerarea PPTX-ului în mediul Codex cu `@oai/artifact-tool` disponibil:
 
 ```sh
+node --experimental-strip-types scripts/render-cinematic-proof.mjs
+sh .build/cinematic-review/convert-proof.sh
 node --experimental-strip-types scripts/export-manifest.mjs
 node scripts/build-deck.mjs
 ```
 
-Calea bibliotecilor poate fi schimbată cu `PRESENTATION_RUNTIME` și cea a skill-ului cu `PRESENTATION_SKILL`. Capturile sunt în `assets/captures/`. Exporterul creează randări în `.build/slides/`, verifică pachetul, dimensiunile, fonturile și importul cu runtime-ul first-party, apoi actualizează copia canonică numai după validare. Versiunile anterioare sunt păstrate în `.build/revisions/`. Manifestul exportat, inclusiv datele geometrice și experimentele fără GPU, este `.build/deck-content.json`.
+Calea bibliotecilor poate fi schimbată cu `PRESENTATION_RUNTIME` și cea a skill-ului cu `PRESENTATION_SKILL`. Proiecțiile CPU curente sunt în `.build/cinematic-review/`; scriptul de conversie folosește ImageMagick. `assets/captures/` păstrează capturi istorice, nefolosite în PPTX-ul actual. Exporterul creează randări în `.build/slides/`, verifică pachetul, dimensiunile, fonturile și importul cu runtime-ul first-party, apoi actualizează copia canonică numai după validare. Versiunile anterioare sunt păstrate în `.build/revisions/`. Manifestul exportat, inclusiv datele geometrice și experimentele fără GPU, este `.build/deck-content.json`.
 
-Cele 17 slide-uri au fost inspectate individual la 1280 × 720 și revizuite independent. Verificarea vizuală în browser pe desktop/telefon și Microsoft PowerPoint nativ nu au fost disponibile pentru această revizie. Verificările de layout în browser din revizia precedentă nu reprezintă o verificare a interfeței actuale.
+Toate cele 17 slide-uri au fost regenerate. Paginile modificate, inclusiv proiecțiile scenei, distribuția cosine-weighted, unghiurile sticlei și valorile SAH, au fost inspectate la 1280 × 720. Layout-urile neschimbate păstrează verificarea anterioară. Verificarea vizuală în browser pe desktop/telefon și Microsoft PowerPoint nativ nu au fost disponibile pentru această revizie. Verificările de layout în browser din revizia precedentă nu reprezintă o verificare a interfeței actuale.
 
 ## Preview prin tailnet
 
