@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {materialPalette} from '../core/transport.ts';
 import {daylightEnvironment} from './lighting.ts';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {sphereCenter,sphereRadius,metalHit,metalNormal,glassEntry,glassExit,lightHit,outsideGlass} from '../core/route.ts';
@@ -14,7 +15,7 @@ export function createCourtyard(){
  const world=new T.Group();world.name='courtyard — cloister, gate, glass gallery';scene.add(world);
  const materials:T.MeshStandardMaterial[]=[];
  const mat=(color:T.ColorRepresentation,roughness=.8,metalness=0)=>{const m=new T.MeshStandardMaterial({color,roughness,metalness});materials.push(m);return m;};
- const stone=mat('#b9ae93'),cutStone=mat('#cbbfa3'),shadowStone=mat('#68716b'),floor=mat('#77796b'),dark=mat('#253a3c'),ochre=mat('#b56a45',.85),bronze=mat('#d2a866',.055,1),oxidized=mat('#527a73',.72,.12);
+ const stone=mat('#b9ae93'),cutStone=mat('#cbbfa3'),shadowStone=mat('#68716b'),floor=mat('#77796b'),dark=mat('#253a3c'),ochre=mat(materialPalette.diffuse,.85),bronze=mat(materialPalette.metal,.055,1),oxidized=mat('#527a73',.72,.12);
  const glass=new T.MeshPhysicalMaterial({color:'#f4fffd',roughness:0,transmission:1,ior:1.5,thickness:2,attenuationColor:'#b5e6dc',attenuationDistance:35,side:T.FrontSide,depthWrite:false});materials.push(glass);
  const mesh=(g:T.BufferGeometry,m:T.Material,p:Vec3,parent:T.Object3D=world)=>{const o=new T.Mesh(g,m);o.position.set(...p);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;};
  const box=(size:Vec3,p:Vec3,m:T.Material,parent:T.Object3D=world)=>mesh(new T.BoxGeometry(...size),m,p,parent);

@@ -6,13 +6,17 @@ import {createCourtyard} from './courtyard';
 import {JourneyVisuals} from './visuals';
 import type {Finale,RenderSettings} from './finale';
 import {RequestGeneration} from '../core/request-generation';
-import {shotPose,shotState,shotFraming,portalWorldPose,portalStart,roomApproachPose} from '../core/cinematics';
+import {shotPose,shotState,portalWorldPose,portalStart,roomApproachPose} from '../core/cinematics';
+import {origin,throughput} from '../core/route';
+import {weightDisplay} from '../core/transport.ts';
+import {type Vec3} from '../core/math';
+import {rasterSize,projectedPosition} from '../ui/layout';
 import {monitor,portalLens,portalCut} from '../core/portal';
 
 export class Journey{
  renderer:T.WebGLRenderer;camera=new T.PerspectiveCamera(43,1,.05,400);room=createRoom();courtyard=createCourtyard();visuals:JourneyVisuals;
  pendingSettings:Partial<RenderSettings>={};controls:OrbitControls;finale:Finale|null=null;exploring=false;pathTracing=false;paused=false;supported:boolean;index=0;fps=0;elapsed=0;transition=1;
- private offset=new T.Vector2();private fromOffset=new T.Vector2();private toOffset=new T.Vector2();private keys=new Set<string>();private previous=0;private active=true;private from=new T.Vector3();private fromTarget=new T.Vector3();private target=new T.Vector3();private portalFrom:[number,number,number]=[...portalStart];private monitorPosition:[number,number,number]=[...portalStart];
+ private sceneViewport={left:0,top:0,width:1,height:1};private keys=new Set<string>();private previous=0;private active=true;private from=new T.Vector3();private fromTarget=new T.Vector3();private target=new T.Vector3();private portalFrom:[number,number,number]=[...portalStart];private monitorPosition:[number,number,number]=[...portalStart];
  private tracingRequests=new RequestGeneration();private drawKey='';private portalAspect=-1;private portalFrame=-1;private portalCamera=new T.PerspectiveCamera(43,1.66/1.06,.05,400);private portalTarget=new T.WebGLRenderTarget(480,306);
  onFrame:((stats:{samples:number;moving:boolean;width:number;height:number;bounces:number;resets:number}|undefined)=>void)|null=null;
  constructor(public canvas:HTMLCanvasElement){
@@ -30,13 +34,16 @@ export class Journey{
  invalidateRaster(){this.drawKey='';}
  replayVisuals(){this.elapsed=0;this.visuals.apply(this.beat);this.invalidateRaster();}
  replayShot(){this.setBeat(this.index,false,true);}
- private applyFraming(){if(!this.exploring)this.camera.setViewOffset(innerWidth,innerHeight,innerWidth*this.offset.x,innerHeight*this.offset.y,innerWidth,innerHeight);}
- resize(){this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.applyFraming();if(this.pathTracing)this.finale?.invalidate();else{const width=this.exploring?Math.round(Math.min(1280,innerWidth,720*this.camera.aspect)):Math.min(640,Math.max(390,innerWidth));this.renderer.setSize(width,Math.round(width/this.camera.aspect),false);}if(!this.exploring){const previous=beats[Math.max(0,this.index-1)];this.fromOffset.set(...shotFraming(previous,this.camera.aspect));this.toOffset.set(...shotFraming(this.beat,this.camera.aspect));this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.canvas.height);}this.invalidateRaster();}
+ setSceneViewport(rect:{left:number;top:number;width:number;height:number}){this.sceneViewport={...rect};this.resize();}
+ projectPoint(point:Vec3){this.camera.updateMatrixWorld();const rect=this.canvas.getBoundingClientRect(),viewport=rect.width&&rect.height?rect:this.sceneViewport;return projectedPosition(new T.Vector3(...point).project(this.camera),viewport);}
+ get primaryPixel(){return this.projectPoint(origin);}
+ get rayWeight(){return weightDisplay(throughput[Math.min(4,Math.max(0,Math.floor(this.visuals.progress)))]);}
+ resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=rasterSize({width,height},this.exploring?1280:960);this.renderer.setSize(size.width,size.height,false);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.canvas.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
  setBeat(index:number,immediate=false,replay=false){
   this.invalidateRaster();this.portalFrame=-1;this.index=Math.max(0,Math.min(beats.length-1,index));const b=this.beat,previous=beats[Math.max(0,this.index-1)];this.elapsed=0;this.transition=immediate?1:0;
   // A beat is a reproducible rail from its canonical predecessor, including
   // captures, direct links, back and replay. No stale target/offset survives.
-  this.from.set(...previous.camera);this.fromTarget.set(...previous.target);this.fromOffset.set(...shotFraming(previous,this.camera.aspect));this.toOffset.set(...shotFraming(b,this.camera.aspect));
+  this.from.set(...previous.camera);this.fromTarget.set(...previous.target);
   if(b.scene==='portal'&&!replay)this.portalFrom=immediate?[...portalStart]:[...this.monitorPosition];
   this.visuals.apply(b);if(immediate||b.seconds===0||matchMedia('(prefers-reduced-motion: reduce)').matches)this.finish();else this.updateTransition(0);
  }
@@ -67,14 +74,14 @@ export class Journey{
   const visible=this.visuals.root.visible;this.visuals.root.visible=false;this.renderer.setRenderTarget(this.portalTarget);this.renderer.render(this.courtyard.scene,this.portalCamera);this.renderer.setRenderTarget(null);this.visuals.root.visible=visible;
  }
  private updateTransition(t:number){
-  const b=this.beat,previous=beats[Math.max(0,this.index-1)],state=shotPose(b,previous,t,this.camera.aspect);this.offset.lerpVectors(this.fromOffset,this.toOffset,state.camera);
+  const b=this.beat,previous=beats[Math.max(0,this.index-1)],state=shotPose(b,previous,t,this.camera.aspect);
   if(b.scene==='portal'){
    if(t<portalCut){
     const pose=roomApproachPose(t,this.camera.aspect,this.from.toArray(),this.fromTarget.toArray());this.camera.position.set(...pose.position);this.target.set(...pose.target);
    }else {const pose=portalWorldPose(t,this.portalFrom);this.camera.position.set(...pose.position);this.target.set(...pose.target);}
-   this.offset.set(0,0);
+
   }else {this.camera.position.set(...state.position);this.target.set(...state.target);}
-  this.applyFraming();this.camera.lookAt(this.target);
+  this.camera.clearViewOffset();this.camera.lookAt(this.target);
  }
  captureAt(t:number){this.transition=Math.max(0,Math.min(1,t));this.elapsed=this.beat.seconds*this.transition;this.updateTransition(this.transition);const state=shotState(this.beat.motion??'arrive',this.transition,this.beat.rayFrom,this.beat.rayTo);this.visuals.update(this.elapsed,state.ray);this.visuals.fitHead(this.camera,this.canvas.height);this.paused=true;this.invalidateRaster();}
  private frame=(now:number)=>{
@@ -85,7 +92,7 @@ export class Journey{
   }
   const b=this.beat;if(!this.paused){this.elapsed+=dt;if(this.transition<1){this.transition=Math.min(1,this.elapsed/Math.max(.01,b.seconds));this.updateTransition(this.transition);
    }const state=shotState(b.motion??'arrive',this.transition,b.rayFrom,b.rayTo);this.visuals.update(this.elapsed,state.ray);this.visuals.fitHead(this.camera,this.canvas.height);}
-  const animated=!this.paused&&(b.scene==='room'||this.transition<1||b.visual==='diffuse'&&this.elapsed<4.5||b.visual==='samples'&&this.elapsed<5||b.visual==='bvh'&&this.elapsed<3.6||b.visual==='traversal'&&this.visuals.manualStep===null&&this.elapsed<this.visuals.traversal.events.length*.85);
+  const animated=!this.paused&&(b.scene==='room'||this.transition<1||this.visuals.isEmitting||b.visual==='diffuse'&&this.elapsed<4.5||b.visual==='bvh'&&this.elapsed<3.6||b.visual==='traversal'&&this.visuals.manualStep===null&&this.elapsed<this.visuals.traversal.events.length*.85);
   const drawKey=[this.index,this.transition,this.visuals.selected.id,this.visuals.lastStep,this.visuals.revision,innerWidth,innerHeight].join('/');
   if(!animated&&drawKey===this.drawKey)return;this.drawKey=drawKey;
   if(b.scene==='room'||b.scene==='portal'&&this.transition<portalCut){this.renderPortal();if(!this.room.scene.children.some(o=>o instanceof T.DirectionalLight&&o.shadow.map))this.renderer.shadowMap.needsUpdate=true;this.renderer.render(this.room.scene,this.camera);

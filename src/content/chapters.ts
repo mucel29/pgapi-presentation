@@ -918,64 +918,55 @@ export const beats:Beat[] = [
     "chapter": "samples",
     "scene": "courtyard",
     "camera": [
-      -53,
-      6.5,
-      49
+      39,
+      12,
+      -19
     ],
     "target": [
-      -39,
+      -36,
       4,
-      22
+      16
     ],
     "rayFrom": 4.18,
     "rayTo": 4.18,
     "visual": "samples",
-    "seconds": 3.2,
+    "seconds": 1.8,
     "layout": "technical",
     "travel": false,
     "captureTime": 1,
-    "via": [
-      [
-        -10,
-        12,
-        25
-      ],
-      [
-        -35,
-        7,
-        47
-      ]
+    "motion": "arrive",
+    "portraitCamera": [
+      32,
+      15,
+      -25
     ],
-    "motion": "arrive"
+    "portraitTarget": [
+      -36,
+      4,
+      16
+    ]
   },
   {
     "id": "loop",
     "chapter": "loop",
     "scene": "courtyard",
     "camera": [
-      25,
-      14,
-      48
+      -24,
+      8,
+      -4
     ],
     "target": [
-      3,
-      5,
-      3
+      -12,
+      4,
+      -38
     ],
     "rayFrom": 4.18,
     "rayTo": 4.18,
     "visual": "loop",
-    "seconds": 2.8,
+    "seconds": 1.8,
     "layout": "technical",
     "travel": false,
     "captureTime": 1,
-    "via": [
-      [
-        -13,
-        10,
-        50
-      ]
-    ],
     "motion": "arrive"
   },
   {

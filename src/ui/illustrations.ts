@@ -2,11 +2,11 @@ import {add,mul,sub,normalize,triangleIntersection,type Vec3} from '../core/math
 export function triangleIllustration(u=.25,v=.35,parallel=false){
  const a:Vec3=[0,0,0],b:Vec3=[4,0,0],c:Vec3=[1.2,3,0],o:Vec3=[1.1,1,4],p=add(a,add(mul(sub(b,a),u),mul(sub(c,a),v))),d:Vec3=parallel?[1,0,0]:normalize(sub(p,o));
  const result=triangleIntersection(o,d,a,b,c),hit=Boolean(result?.hit),color=hit?'#8ce3b6':'#f19489';
- const project=(p:Vec3)=>[80+p[0]*90+p[2]*26,330-p[1]*65-p[2]*22],point=(p:Vec3)=>project(p).join(','),pp=project(p),op=project(o),n=project(add(p,[0,0,2]));
+ const project=(p:Vec3)=>[32+p[0]*75+p[2]*12,205-p[1]*48-p[2]*15],point=(p:Vec3)=>project(p).join(','),pp=project(p),op=project(o),n=project(add(p,[0,0,2]));
  const end=parallel?project(add(o,[3,0,0])):project(add(p,mul(d,1.3)));
- const svg=`<svg viewBox="0 0 600 385" role="img" aria-label="Intersecția calculată dintre o rază și un triunghi; coordonate baricentrice interactive">
+ const svg=`<svg viewBox="0 0 400 240" role="img" aria-label="Intersecția calculată dintre o rază și un triunghi; coordonate baricentrice interactive">
  <defs><marker id="tri-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="${color}"/></marker></defs>
- <path d="M44 350H505V95H44Z" fill="#16333b" stroke="#476468" stroke-dasharray="4 6"/>
+ <path d="M15 218H375V48H15Z" fill="#16333b" stroke="#476468" stroke-dasharray="4 6"/>
  <polygon points="${point(a)} ${point(b)} ${point(c)}" fill="#244f51"/>
  <polygon points="${point(p)} ${point(b)} ${point(c)}" fill="#a57451" opacity=".4"/><polygon points="${point(a)} ${point(p)} ${point(c)}" fill="#507d9b" opacity=".4"/><polygon points="${point(a)} ${point(b)} ${point(p)}" fill="#70965b" opacity=".4"/>
  <path d="M${point(a)}L${point(b)}L${point(c)}Z" stroke="#f0cc8c" stroke-width="3" fill="none"/>
@@ -14,10 +14,10 @@ export function triangleIllustration(u=.25,v=.35,parallel=false){
  <path d="M${pp}L${n}" stroke="#75e5e7" stroke-width="2"/><text x="${n[0]+6}" y="${n[1]-3}" fill="#75e5e7">n</text>
  <circle cx="${op[0]}" cy="${op[1]}" r="6" fill="#eee8cb"/><text x="${op[0]+12}" y="${op[1]-8}">o</text>
  <circle cx="${pp[0]}" cy="${pp[1]}" r="6" fill="${color}"/><text x="${pp[0]+10}" y="${pp[1]+20}">P</text>
- <text x="65" y="352">A</text><text x="447" y="352">B</text><text x="178" y="121">C</text>
- <text x="345" y="58" fill="${color}">${parallel?'PARALEL':hit?'HIT':'MISS'}</text>
- <text x="345" y="83">${parallel?'fără intersecție unică':`t = ${result!.t.toFixed(3)}`}</text>
- <text x="48" y="377">P = (1 − u − v)A + uB + vC</text></svg>`;
+ <text x="18" y="232">A</text><text x="334" y="232">B</text><text x="112" y="43">C</text>
+ <text x="245" y="28" fill="${color}">${parallel?'PARALEL':hit?'HIT':'MISS'}</text>
+ <text x="245" y="53">${parallel?'det ≈ 0':`t = ${result!.t.toFixed(3)}`}</text>
+ </svg>`;
  return {svg,result,summary:`u=${u.toFixed(2)} · v=${v.toFixed(2)} · 1−u−v=${(1-u-v).toFixed(2)} · ${parallel?'det≈0':hit?'HIT':'MISS'}`};
 }
 export const flowSteps=['Rază din cameră','Cel mai apropiat hit','Adună emisia','Eșantionează lumina','Alege direcția BSDF','Actualizează β','Continuă sau termină'];

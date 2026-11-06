@@ -1,3 +1,4 @@
+import {materialThroughput} from './transport.ts';
 import {add,sub,mul,dot,normalize,reflect,refract,intersectSphere,type Vec3} from './math.ts';
 // A deterministic selected path. Each material interaction is locally valid.
 export const origin:Vec3=[-45,4,38],sphereCenter:Vec3=[-32,4,-4],sphereRadius=3;
@@ -13,5 +14,5 @@ export const glassExit=add(glassEntry,mul(insideGlass,2/-insideGlass[2]));
 export const outsideGlass=refract(insideGlass,glassNormal,1.5)!;
 export const lightHit=add(glassExit,mul(outsideGlass,40));
 export const route:Vec3[]=[origin,diffuseHit,metalHit,glassEntry,glassExit,lightHit];
-export const throughput:Vec3[]=[[1,1,1],[.75,.28,.13],[.75*.91,.28*.78,.13*.52],[.75*.91,.28*.78,.13*.52],[.75*.91,.28*.78,.13*.52]];
+export const throughput:Vec3[]=[...materialThroughput,materialThroughput[2],materialThroughput[2]];
 export const routeChecks={diffuseHemisphere:dot(normalize(sub(metalHit,diffuseHit)),diffuseNormal),reflection:reflect(metalIn,metalNormal),transmission:outsideGlass};

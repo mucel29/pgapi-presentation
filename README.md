@@ -2,7 +2,7 @@
 
 Prezentare în română pentru Programare grafică avansată și prelucrarea imaginilor: 15 teme, patru secvențe de deplasare, aproximativ 17–19 minute cu opriri pentru demonstrații, urmate de explorare opțională.
 
-Începem la un birou obișnuit, cu PC și monitor. Monitorul arată curtea în mișcare lentă, rasterizată. Intrarea continuă aceeași mișcare în lumea virtuală: un culoar umbrit se deschide spre o curte adâncă, un element difuz din ocru, o foaie de poartă din bronz, un vestibul de sticlă și o cameră retrasă cu lumină caldă. Materialele fac parte din arhitectură. Secțiunea BVH folosește cele 96 de triunghiuri ale arcului structural din spate.
+Începem la un birou obișnuit, cu PC și monitor. Monitorul arată curtea în mișcare lentă, rasterizată. Intrarea continuă aceeași mișcare în lumea virtuală: un culoar umbrit se deschide spre o curte adâncă, un element difuz cian, o foaie de poartă din bronz cald, un vestibul de sticlă și o cameră retrasă cu lumină caldă. Materialele fac parte din arhitectură. Secțiunea BVH folosește cele 96 de triunghiuri ale arcului structural din spate.
 
 Raza pornește înaintea observatorului. Camera o urmărește pe segmente de aproximativ 41, 50, 55 și 40 de unități, apoi se așază la fiecare demonstrație. La sticlă sunt distincte sosirea, intrarea, ieșirea și continuarea. Navigarea rămâne manuală.
 
@@ -38,11 +38,14 @@ Site-ul nu folosește CDN, framework UI sau backend. Bibliotecile, fonturile și
 - **O**: cuprins; **C**: cod; **N**: detalii; **F**: fullscreen.
 - **Home / End**: început / ultimul slide.
 - Codul și detaliile pun animația pe pauză. Slide-ul principal are o explicație scurtă și cel mult două idei; detaliile păstrează derivările și observațiile complete.
+- Diagramele și comenzile lecției stau într-o zonă opacă, separată de viewport-ul scenei. Pe telefon, scena apare deasupra lecției.
 - BVH: selectează noduri. **Opțiuni** deschide părinții, raza hit/miss și **Alege ținta** și click pe arc. **Primul / Pas / Ultimul / Rulează** controlează traversarea; triunghiul closest-hit este magenta.
 - Intersecția rază–triunghi: slidere u/v și cazuri interior, muchie, exterior, paralel. Diagrama și BVH-ul folosesc aceeași implementare Möller–Trumbore.
 - Bucla de path tracing: pași manuali pentru contribuția emisivă, shadow ray, BSDF și registrele L/β.
 - Sticlă: alege o predicție pentru direcția de ieșire, apoi vezi ramura transmisă prin ambele fețe.
 - Samples: modifică separat numărul traseelor și limita de bounces. SAH: compară costul unor tăieturi reale pe arc.
+- În demonstrația Samples, observatorul rămâne lângă sticlă. O vedere izolată ascunde temporar arhitectura și arată aceeași sferă ca wireframe translucid. Cele 12/24/48 de lansări ilustrate sunt reprezentative; bugetul SPP rămâne separat. Geometria revine la ieșirea din demonstrație.
+- Raza afișează nuanța normalizată a ponderii RGB β. Valorile RGB liniare și max(β) se citesc separat; nuanța singură nu arată mărimea contribuției. Materialele cian și bronz folosesc aceleași culori în geometrie și în calculul didactic al ponderii.
 - Zgomot: experiment sintetic la 1/4/16/64/256 samples, cu RMSE măsurat față de un semnal cunoscut. Nu pornește rendererul path-traced.
 
 Linkuri directe: `#chapter=bvh`, `#chapter=traversal`, `#chapter=materials&beat=to-glass`. Sunt păstrate aliasurile vechi `gpu`, `accumulation`, `modern`.
@@ -76,13 +79,13 @@ Manifestul comun este `src/content/chapters.ts`: conținut, note, surse și secv
 Pentru regenerarea PPTX-ului în mediul Codex cu `@oai/artifact-tool` disponibil:
 
 ```sh
-node --experimental-strip-types scripts/render-cinematic-proof.mjs
-sh .build/cinematic-review/convert-proof.sh
+node --experimental-strip-types scripts/render-current-projections.mjs
+sh .build/current-projections/convert.sh
 node --experimental-strip-types scripts/export-manifest.mjs
 node scripts/build-deck.mjs
 ```
 
-Calea bibliotecilor poate fi schimbată cu `PRESENTATION_RUNTIME` și cea a skill-ului cu `PRESENTATION_SKILL`. Proiecțiile CPU curente sunt în `.build/cinematic-review/`; scriptul de conversie folosește ImageMagick. `assets/captures/` păstrează capturi istorice, nefolosite în PPTX-ul actual. Exporterul creează randări în `.build/slides/`, verifică pachetul, dimensiunile, fonturile și importul cu runtime-ul first-party, apoi actualizează copia canonică numai după validare. Versiunile anterioare sunt păstrate în `.build/revisions/`. Manifestul exportat, inclusiv datele geometrice și experimentele fără GPU, este `.build/deck-content.json`.
+Calea bibliotecilor poate fi schimbată cu `PRESENTATION_RUNTIME` și cea a skill-ului cu `PRESENTATION_SKILL`. Proiecțiile CPU curente sunt în `.build/current-projections/`, la aspectul viewport-ului scenei de 794×568 într-o fereastră de 1280×720; conversia folosește ImageMagick. `assets/captures/` și vechiul `.build/cinematic-review/` păstrează rezultate istorice, nefolosite în PPTX-ul actual. Exporterul creează randări în `.build/slides/`, verifică pachetul, dimensiunile, fonturile și importul cu runtime-ul first-party, apoi actualizează copia canonică numai după validare. Versiunile anterioare sunt păstrate în `.build/revisions/`. Manifestul exportat, inclusiv datele geometrice și experimentele fără GPU, este `.build/deck-content.json`. `output/raytracing-preview.jpg` arată cele 17 slide-uri, iar `raytracing-glass-preview.png` redă diagrama editabilă a sticlei.
 
 Toate cele 17 slide-uri au fost regenerate. Paginile modificate, inclusiv proiecțiile scenei, distribuția cosine-weighted, unghiurile sticlei și valorile SAH, au fost inspectate la 1280 × 720. Layout-urile neschimbate păstrează verificarea anterioară. Verificarea vizuală în browser pe desktop/telefon și Microsoft PowerPoint nativ nu au fost disponibile pentru această revizie. Verificările de layout în browser din revizia precedentă nu reprezintă o verificare a interfeței actuale.
 

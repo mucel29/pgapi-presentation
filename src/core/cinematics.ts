@@ -68,11 +68,8 @@ export function shotPose(shot:ShotDefinition,previous:ShotDefinition,t:number,as
  const position=rail([fromCamera,...(shot.via??[]),toCamera],state.camera),target=rail([fromTarget,...(shot.aimVia??[]),toTarget],state.camera);
  return {position,target,...state};
 }
-export function shotFraming(shot:ShotDefinition,aspect:number):[number,number]{
- if(shot.layout==='travel')return [0,0];
- const bvh=['cost','bvh','sah','aabb','traversal'].includes(shot.visual);
- return aspect<.9?[0,bvh?-.06:-.13]:[-.17,bvh?.21:0];
-}
+// Canvas and lesson rail are physically disjoint; no projection offsets.
+export function shotFraming(_shot:ShotDefinition,_aspect:number):[number,number]{return [0,0];}
 
 export function roomApproachPose(t:number,aspect:number,from:Vec3=[2.4,2.6,5.9],fromTarget:Vec3=[...monitor.center]){
  const u=clamp01(t/portalCut),e=ease(u),center=new T.Vector3(...monitor.center),end=center.clone().add(new T.Vector3(0,0,portalLens(aspect).distance));

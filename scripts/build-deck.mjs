@@ -7,6 +7,8 @@ const {chapters,beats,sources,glossary,bvh,experiments}=JSON.parse(await fs.read
 const presentation=Presentation.create({slideSize:{width:1280,height:720}});
 const C={bg:'#10262D',ink:'#EDF0E4',muted:'#C0D1C3',quiet:'#91ADA1',gold:'#EDBD7F',cyan:'#88C6C4',line:'#416360',dark:'#091C23',green:'#9CD9B5',red:'#EF9E97',purple:'#CDA7CF'};
 const font='DejaVu Sans',mono='DejaVu Sans Mono';
+const displayColor=rgb=>'#'+rgb.map(v=>Math.round(255*(v<=.0031308?12.92*v:1.055*v**(1/2.4)-.055)).toString(16).padStart(2,'0')).join('');
+const betaStages=experiments.transport.stages,betaColors=betaStages.map(stage=>displayColor(stage.hue));
 await fs.mkdir('.build/slides',{recursive:true});await fs.mkdir('output',{recursive:true});
 function rect(s,x,y,w,h,fill,line='none'){return s.shapes.add({geometry:'rect',position:{left:x,top:y,width:w,height:h},fill,line:{fill:line,width:line==='none'?0:1.5}});}
 function text(s,value,x,y,w,h,size=24,color=C.ink,bold=false,typeface=font){const sh=s.shapes.add({geometry:'textbox',position:{left:x,top:y,width:w,height:h},fill:'none',line:{fill:'none',width:0}});sh.text=value;sh.text.style={fontSize:size,typeface,color,bold,insets:0,verticalAlignment:'top',wrap:'square',autoFit:'none',lineSpacing:1.12};return sh;}
@@ -14,7 +16,7 @@ function line(s,x,y,xx,yy,color=C.line,width=2){return s.shapes.add({geometry:'l
 function arrow(s,x,y,xx,yy,color=C.gold,width=3){line(s,x,y,xx,yy,color,width);const a=Math.atan2(yy-y,xx-x),r=12;for(const d of [-.45,.45])line(s,xx,yy,xx-r*Math.cos(a+d),yy-r*Math.sin(a+d),color,width);}
 function dot(s,x,y,color=C.ink,r=5){return s.shapes.add({geometry:'ellipse',position:{left:x-r,top:y-r,width:r*2,height:r*2},fill:color,line:{fill:'none',width:0}});}
 function poly(s,pts,fill='none',stroke=C.cyan,width=2,close=true){const minX=Math.min(...pts.map(p=>p[0])),minY=Math.min(...pts.map(p=>p[1])),w=Math.max(1,Math.max(...pts.map(p=>p[0]))-minX),h=Math.max(1,Math.max(...pts.map(p=>p[1]))-minY);return s.shapes.add({geometry:'custom',position:{left:minX,top:minY,width:w,height:h},fill,line:{fill:stroke,width},customPaths:[{width:w,height:h,commands:[{moveTo:{x:pts[0][0]-minX,y:pts[0][1]-minY}},...pts.slice(1).map(p=>({lineTo:{x:p[0]-minX,y:p[1]-minY}})),...(close?[{close:{}}]:[])]}]});}
-async function image(s,id,x,y,w,h){s.images.add({blob:await fs.readFile(`.build/cinematic-review/${id}.png`),contentType:'image/png',position:{left:x,top:y,width:w,height:h},fit:'contain',alt:`Proiecție CPU a geometriei actuale: ${id}; fără iluminare/reflexii WebGL`});}
+async function image(s,id,x,y,w,h){const current={ 'portal-0':'room','arrival-bvh':'bvh','arrival-light':'light' }[id];s.images.add({blob:await fs.readFile(`.build/current-projections/${current}.png`),contentType:'image/png',position:{left:x,top:y,width:w,height:h},fit:'contain',alt:`Proiecție CPU a geometriei actuale: ${current}; fără iluminare/reflexii WebGL`});}
 function header(s,n,label){s.background.fill=C.bg;text(s,label,54,35,1100,24,14,C.cyan,true,mono);line(s,54,676,1226,676);text(s,`${String(n).padStart(2,'0')} / 17`,1130,690,96,17,11,C.quiet,false,mono);}
 function title(s,t){text(s,t,54,85,1172,72,43,C.ink,true);}
 function left(s,c,{formula=true}={}){text(s,c.slide.intro,54,190,454,112,28,C.muted);let y=326;for(const p of c.slide.points){text(s,'›',54,y,18,36,26,C.gold);text(s,p,82,y,424,82,24);y+=100;}if(formula&&c.slide.formula)text(s,c.slide.formula,54,560,460,80,21,C.gold,false,mono);}
@@ -41,7 +43,7 @@ for(const [i,c] of chapters.entries()){
   arrow(s,727,230,...P,C.green);dot(s,...P,C.green,7);dot(s,...M,C.red,7);text(s,'A',598,531,45,35,24);text(s,'B',1168,531,45,35,24);text(s,'C',782,193,45,35,24);text(s,'P · HIT',834,429,200,35,21,C.green);text(s,'MISS',1112,337,110,35,21,C.red);
   text(s,'u = 0.25 · v = 0.35',635,576,580,30,21,C.cyan,false,mono);caption(s,'În afara triunghiului, deși punctul se află în plan.',584,619,640);
  }else if(c.id==='diffuse'){
-  left(s,c);line(s,610,522,1200,522,C.line,3);arrow(s,884,520,884,235,C.cyan,3);text(s,'n',898,234,70,40,24,C.cyan,false,mono);for(const d of experiments.diffuse)arrow(s,884,520,884+d[0]*230+d[2]*55,520-d[1]*245,C.gold,2);dot(s,884,520,C.ink,7);text(s,'20 de direcții cosine-weighted',584,565,642,36,23,C.cyan);caption(s,'Schemă locală · alternative pentru un singur bounce',584,615,642);
+  left(s,c);line(s,610,522,1200,522,C.line,3);arrow(s,884,520,884,235,C.cyan,3);text(s,'n',898,234,70,40,24,C.cyan,false,mono);for(const d of experiments.diffuse)arrow(s,884,520,884+d[0]*230+d[2]*55,520-d[1]*245,betaColors[1],2);dot(s,884,520,experiments.transport.palette.diffuse,7);text(s,'20 de direcții cosine-weighted',584,565,642,36,23,betaColors[1]);caption(s,'Material cian · nuanță β normalizată pentru afișare',584,615,642);
  }else if(c.id==='materials'){
   left(s,c);const x0=825,x1=955,y0=345,theta=experiments.glass.incomingAngle*Math.PI/180,phi=experiments.glass.insideAngle*Math.PI/180,y1=y0+130*Math.tan(phi);
   rect(s,x0,215,x1-x0,340,'#234C54',C.cyan);text(s,'aer',648,215,150,34,23);text(s,'n = 1.5',831,176,180,34,21,C.cyan,false,mono);text(s,'aer',1055,215,120,34,23);
@@ -54,10 +56,12 @@ for(const [i,c] of chapters.entries()){
   for(let j=0;j<8;j++)for(let k=0;k<4;k++)rect(s,78+j*49,449+k*28,34,16,C.gold);for(let j=0;j<8;j++){dot(s,722+j*62,484,C.cyan,6);if(j<7)line(s,728+j*62,484,778+j*62,484,C.cyan,3);}
   text(s,'32 trasee estimate pentru pixel',74,591,530,52,23);text(s,'Până la 8 interacțiuni pe traseu',704,591,522,52,23);
  }else if(c.id==='loop'){
-  text(s,c.slide.intro,54,175,1172,50,29,C.muted);const steps=['Rază din cameră','Cel mai apropiat hit','Emisie + direct lighting','Sample BSDF','Actualizează β','Continuă sau termină'];
-  steps.forEach((v,j)=>{const y=256+j*60;dot(s,73,y+14,j===4?C.cyan:C.gold,5);text(s,v,103,y,490,40,25);if(j<5)arrow(s,73,y+24,73,y+48,C.line,2);});line(s,570,242,570,635,C.line);
-  text(s,'L',635,262,90,80,58,C.gold,true,mono);text(s,'lumină adunată',745,281,470,45,28);text(s,'L += β · contribuție',635,357,580,48,24,C.gold,false,mono);
-  text(s,'β',635,448,90,80,58,C.cyan,true,mono);text(s,'ponderea traseului',745,467,470,45,28);text(s,c.slide.formula,635,543,590,48,23,C.cyan,false,mono);caption(s,'Un path produce un sample. MIS evită dublarea contribuțiilor.',635,621,590);
+  text(s,c.slide.intro,54,175,1172,50,29,C.muted);const steps=['Rază din cameră','Cel mai apropiat hit','Adună emisia','Eșantionează lumina','Alege direcția BSDF','Actualizează β','Continuă sau termină'];
+  steps.forEach((v,j)=>{const y=250+j*54;dot(s,73,y+14,j===5?C.cyan:C.gold,5);text(s,v,103,y,440,40,25);if(j<6)arrow(s,73,y+24,73,y+44,C.line,2);});line(s,570,242,570,645,C.line);
+  text(s,'L',635,252,90,80,58,C.gold,true,mono);text(s,'lumină adunată',745,271,470,45,28);text(s,'L += β · contribuție',635,337,580,48,24,C.gold,false,mono);
+  text(s,'β',635,404,90,80,58,C.cyan,true,mono);text(s,'ponderea traseului',745,423,470,45,28);text(s,c.slide.formula,635,491,590,48,23,C.cyan,false,mono);
+  betaStages.forEach((stage,j)=>{const x=657+j*195;dot(s,x,566,betaColors[j],10);if(j<2)arrow(s,x+20,566,x+168,566,C.line,2);text(s,['cameră','după cian','după bronz'][j],x-22,588,188,29,18,C.muted);text(s,`max β ${stage.magnitude.toFixed(2)}`,x-22,615,188,27,17,betaColors[j],false,mono);});
+  caption(s,'Nuanța este normalizată. Mărimea β se citește separat.',635,648,590);
  }else if(c.id==='cost'){
   text(s,'Buget ilustrativ pentru un cadru',54,175,1172,44,29,C.muted);text(s,'796 milioane',54,242,1172,100,78,C.gold,true);text(s,'1920 × 1080 pixeli × 64 samples × până la 6 interacțiuni',54,364,1172,62,28);
   line(s,54,456,1226,456);text(s,'Interogări closest-hit',54,491,520,46,30,C.cyan,true);text(s,'Fiecare cere căutarea\ncelui mai apropiat triunghi.',54,551,520,82,26,C.muted);
@@ -89,8 +93,10 @@ for(const [i,c] of chapters.entries()){
  }
  const travel=beats.filter(b=>b.chapter===c.id&&b.travel).map(b=>`${b.title}: ${b.intro}`).join('\n');
  s.speakerNotes.text=`${c.intro}\n\n${c.points.join('\n\n')}\n\n${c.formula}\n${c.formulaNote}\n\n${c.notes}\n\n${c.codeLabel}\n${c.code}\n\nCod: ${c.codeSource}\n\nSurse:\n${c.sources.join('\n')}${travel?'\n\nTranziții în prezentarea live:\n'+travel:''}\n\nDurată orientativă: ${c.duration}.`;
- if(['room','bvh','light'].includes(c.id))s.speakerNotes.text+='\n\nImagine: proiecție CPU a geometriei actuale și a pozițiilor de cameră din Beat/shotPose. Nu este o captură de browser și nu reproduce iluminarea, reflexiile sau transmisia WebGL. Sursa: scripts/render-cinematic-proof.mjs.';
+ if(['room','bvh','light'].includes(c.id))s.speakerNotes.text+='\n\nImagine: proiecție CPU a geometriei actuale și a pozițiilor de cameră din Beat/shotPose, la aspectul viewport-ului scenei 794×568 pentru fereastra 1280×720. Nu este o captură de browser și nu reproduce iluminarea, reflexiile sau transmisia WebGL. Sursa: scripts/render-current-projections.mjs.';
+ if(c.id==='samples')s.speakerNotes.text+='\n\nDemonstrația live păstrează observatorul lângă sticlă și izolează razele primare: arhitectura se ascunde temporar, iar aceeași sferă analitică apare ca wireframe translucid. La ieșire, geometria și materialele se restaurează. Sunt ilustrate 12, apoi 24 și cel mult 48 de lansări reprezentative, fără echivalență între numărul desenat și bugetul numeric SPP. Creșterea bugetului lansează raze suplimentare de la momentul interacțiunii. Replay păstrează selecția și reia animația. Camera nu revine la începutul traseului.';
  if(c.id==='diffuse')s.speakerNotes.text+='\n\nDiagramă locală editabilă: 20 de direcții generate cu cosineHemisphere din src/core/math.ts. Nu reprezintă toate ramurile unui path sau o captură a scenei.';
+ if(['diffuse','materials','loop','light'].includes(c.id))s.speakerNotes.text+='\n\nCulori și throughput: materialul difuz este cian ('+experiments.transport.palette.diffuse+'), iar reflectorul este bronz cald ('+experiments.transport.palette.metal+'). Valorile RGB sunt convertite în spațiul liniar înainte de înmulțire. β la cameră / după diffuse / după metal: '+betaStages.map(stage=>'['+stage.rgb.map(v=>v.toFixed(4)).join(', ')+']').join(' / ')+'. Nuanța desenată este β/max(β), apoi convertită în sRGB. max(β) se afișează separat, ca mărime relativă a ponderii, fără a pretinde că nuanța reprezintă energia sau radiance L. Modelul didactic păstrează β după sticlă și nu include Fresnel sau absorbție. Sursa: src/core/transport.ts și src/core/route.ts.';
  if(c.id==='noise')s.speakerNotes.text+='\n\nExperiment Bernoulli sintetic, seed 4279, grilă 20×12. Media fiecărui pixel este comparată cu semnalul de probabilitate cunoscut. RMSE-urile afișate provin din src/core/experiments.ts și nu măsoară scena WebGL.';
  if(c.id==='traversal')s.speakerNotes.text+=`\n\nRaza implicită: primul hit în N${bvh.traversal.events.find(e=>e.triangle>=0).node.id}, apoi N${bvh.traversal.events.find(e=>e.status==='pruned').node.id} este eliminat. Numărătoarea finală este de ${bvh.traversal.triangleTests} teste cu triunghiuri și ${bvh.traversal.boxTests} teste AABB.`;
  console.log(`Authored ${i+1}/15`);
