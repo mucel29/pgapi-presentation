@@ -2,6 +2,6 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   base: './',
   build: { target: 'es2022', chunkSizeWarningLimit: 1100 },
-  server: { host: '127.0.0.1' },
+  server: { host: '127.0.0.1', allowedHosts: ['upsilon'] },
   preview: { allowedHosts: ['upsilon'] },
 });

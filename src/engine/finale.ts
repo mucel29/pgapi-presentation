@@ -1,35 +1,42 @@
 import * as T from 'three';
 import type { WebGLPathTracer } from 'three-gpu-pathtracer';
 import { Denoiser, GeometryGuides } from './denoiser';
+import {RetryablePreparation} from '../core/preparation.ts';
 import {CameraMotionGate} from '../core/motion';
 import type { SceneWorld } from './room';
 
+// The vendor handles these extra transmission events separately from principal bounces.
+export const EXTRA_TRANSMISSIVE_BOUNCES=8;
 export interface RenderSettings { scale:number;samplesPerUpdate:number;bounces:number;denoise:boolean;strength:number;passes:number;motionThreshold:number; }
 export class Finale {
   tracer:WebGLPathTracer|null=null;
   ready=false;error='';active=false;lastMotion=0;mode='';revision=0;resets=0;
   settings:RenderSettings={scale:1,samplesPerUpdate:1,bounces:8,denoise:true,strength:.8,passes:3,motionThreshold:.35};
   focusDistance=60;guides:GeometryGuides;denoiser:Denoiser;
+  private preparation=new RetryablePreparation<WebGLPathTracer>();
   private motion=new CameraMotionGate();private displayTarget=new T.WebGLRenderTarget(1,1,{depthBuffer:false});private hasFrame=false;private guideDirty=true;private viewport=[0,0];
   constructor(public renderer:T.WebGLRenderer,public room:SceneWorld,public camera:T.PerspectiveCamera) {
     this.guides=new GeometryGuides(renderer);this.denoiser=new Denoiser(renderer);
   }
+  get preparationStatus(){return this.preparation.status;}
   async prepare(isCurrent:()=>boolean=()=>true) {
-    if(this.ready||this.error)return;
-    try {
+    if(this.ready)return;
+    this.error='';
+    // This factory is reached only after Journey's explicit Start request.
+    await this.preparation.prepare(async()=>{
       const {WebGLPathTracer}=await import('three-gpu-pathtracer');
-      if(!isCurrent())return;
+      return ()=>new WebGLPathTracer(this.renderer);
+    },tracer=>{
       this.room.setBeauty(true);
-      const tracer=new WebGLPathTracer(this.renderer);
       tracer.renderToCanvas=false;tracer.renderDelay=0;tracer.minSamples=1;tracer.fadeDuration=0;
-      tracer.bounces=8;tracer.transmissiveBounces=8;tracer.textureSize.set(512,512);
+      tracer.bounces=this.settings.bounces;tracer.transmissiveBounces=EXTRA_TRANSMISSIVE_BOUNCES;tracer.textureSize.set(512,512);
       tracer.tiles.set(1,1);
       // v0.0.23 exposes this property at runtime but omits it from index.d.ts.
       (tracer as WebGLPathTracer & {stableNoise:boolean}).stableNoise=true;
       tracer.setScene(this.room.scene,this.camera);
-      this.tracer=tracer;this.ready=true;
-      this.room.setBeauty(false);
-    } catch(e){this.room.setBeauty(false);this.error=e instanceof Error?e.message:String(e);console.error('Path tracer preparation:',e);}
+    },isCurrent);
+    this.room.setBeauty(false);
+    this.tracer=this.preparation.resource;this.ready=this.preparation.status==='ready';this.error=this.preparation.error;
   }
   start(){this.active=true;this.mode='';this.motion.reset();this.hasFrame=false;this.lastMotion=-Infinity;this.room.setBeauty(true);this.tracer?.updateMaterials();this.invalidate();}
   stop(){this.active=false;this.room.setBeauty(false);}

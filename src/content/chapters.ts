@@ -14,7 +14,7 @@ export const sources = {
   "nrd": "https://github.com/NVIDIA-RTX/NRD",
   "oidn": "https://www.openimagedenoise.org/",
   "tracer": "https://github.com/gkjohnson/three-gpu-pathtracer/tree/v0.0.23",
-  "meshbvh": "https://github.com/gkjohnson/three-mesh-bvh"
+  "meshbvh": "https://github.com/gkjohnson/three-mesh-bvh/tree/v0.8.3"
 };
 export const chapters:Chapter[] = [
   {
@@ -256,7 +256,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "Evantai schematic · numărul liniilor nu indică SPP",
     "code": "vec3 color = vec3(0.0);\nfor (int s = 0; s < samples; s++) {\n  Ray ray = generateCameraRay(pixel, random2());\n  color += tracePath(ray, maxBounces);\n}\ncolor /= float(samples);",
     "codeLabel": "GLSL · estimare Monte Carlo (schematic)",
-    "notes": "Compară două reglaje: 32 samples cu maximum 2 bounces și 32 samples cu maximum 8 bounces. Numărul estimărilor rămâne 32. În a doua variantă, fiecare traseu poate include mai multă iluminare indirectă și poate costa mai mult. Samples per pixel nu se obține înmulțind samples cu bounces. Nici fiecare segment desenat înseamnă un sample nou. O limită fixă mică de bounces poate omite contribuții reale, deci acumularea unui număr oricât de mare de samples nu repară acea trunchiere. O parte dintre trasee se pot termina înainte de limită, de exemplu la miss sau prin Russian roulette. Convențiile de numărare a interacțiunilor pot diferi între renderere.",
+    "notes": "Compară două reglaje: 32 samples cu maximum 2 bounces și 32 samples cu maximum 8 bounces. Numărul estimărilor rămâne 32. În a doua variantă, fiecare traseu poate include mai multă iluminare indirectă și poate costa mai mult. Samples per pixel nu se obține înmulțind samples cu bounces. Nici fiecare segment desenat înseamnă un sample nou. O limită fixă mică de bounces poate omite contribuții reale, deci acumularea unui număr oricât de mare de samples nu repară acea trunchiere. O parte dintre trasee se pot termina înainte de limită, de exemplu la miss sau prin Russian roulette. În explorator, BSDF principal are un buget separat de cele 8 traversări transmisive suplimentare. Produsul samples × segmente este doar plafonul modelului didactic și exclude umbrele.",
     "camera": [
       -33,
       10,
@@ -371,7 +371,7 @@ export const chapters:Chapter[] = [
     "codeSource": "src/core/bvh.ts · buildSAH",
     "sources": [
       "https://pbr-book.org/4ed/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies",
-      "https://github.com/gkjohnson/three-mesh-bvh"
+      "https://github.com/gkjohnson/three-mesh-bvh/tree/v0.8.3"
     ],
     "duration": "1:15",
     "id": "bvh",
@@ -416,7 +416,7 @@ export const chapters:Chapter[] = [
     "codeSource": "src/core/bvh.ts · buildSAH",
     "sources": [
       "https://pbr-book.org/4ed/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies",
-      "https://github.com/gkjohnson/three-mesh-bvh"
+      "https://github.com/gkjohnson/three-mesh-bvh/tree/v0.8.3"
     ],
     "duration": "1:05",
     "id": "sah",
@@ -505,7 +505,7 @@ export const chapters:Chapter[] = [
     "codeSource": "src/core/bvh.ts · traceSAH; src/core/math.ts · intersectTriangle",
     "sources": [
       "https://pbr-book.org/4ed/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies",
-      "https://github.com/gkjohnson/three-mesh-bvh"
+      "https://github.com/gkjohnson/three-mesh-bvh/tree/v0.8.3"
     ],
     "duration": "1:50",
     "id": "traversal",
@@ -641,7 +641,7 @@ export const chapters:Chapter[] = [
     "codeSource": "src/engine/finale.ts",
     "sources": [
       "https://github.com/gkjohnson/three-gpu-pathtracer/tree/v0.0.23",
-      "https://github.com/gkjohnson/three-mesh-bvh",
+      "https://github.com/gkjohnson/three-mesh-bvh/tree/v0.8.3",
       "https://research.nvidia.com/labs/rtr/publication/schied2017spatiotemporal/"
     ],
     "duration": "0:45",
@@ -657,8 +657,8 @@ export const chapters:Chapter[] = [
     ],
     "formula": "L ← L + β · Le",
     "formulaNote": "Contribuție pentru un traseu. Pixelul final este media multor estimări.",
-    "code": "// Numai după Start explicit:\nawait finale.prepare();\nfinale.start();\n// La mișcare: rezoluție mică, 2 bounces.\n// După stabilizare: rezoluția aleasă, implicit 8 bounces.\n// Schimbarea estimatorului resetează acumularea.",
-    "codeLabel": "Politica explorării opționale",
+    "code": "// Numai după Start explicit:\nawait finale.prepare();\nfinale.start();\n// La mișcare: rezoluție mică, 2 bounces BSDF.\n// După stabilizare: rezoluția aleasă, implicit 8 BSDF.\n// Separat: +8 traversări transmisive; umbrele se adaugă.\n// Schimbarea estimatorului resetează acumularea.",
+    "codeLabel": "Pseudocod · politica explorării opționale",
     "notes": "Revino la întrebarea din camera cu biroul: „Ce culoare primește pixelul?” Acest traseu aduce β·Le, iar altele pot aduce contribuții diferite sau zero. Schimbarea culorii suprafeței diffuse ar modifica ponderea contribuției. Eliminarea BVH-ului ar modifica numărul testelor, dar trebuie să păstreze același hit. Sampling-ul și denoising-ul afectează variația și reconstrucția imaginii în moduri diferite. Închide lecția înainte de explorare. Canionul poate fi explorat imediat rasterizat. Start path tracing încarcă explicit rendererul 0.0.23, apoi construiește scena și începe acumularea. Nicio inițializare, compilare sau randare path-traced nu se face automat în timpul prezentării. La mișcare, modul real folosește până la 320×180 și două bounces. După aproximativ 400 ms de stabilitate revine la rezoluția configurată și implicit opt bounces, cu resetarea acumulării la schimbarea modului.",
     "camera": [
       31,

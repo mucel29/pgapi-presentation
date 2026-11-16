@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {materialPalette} from '../core/transport.ts';
+import {materialPalette,polishedRoughness} from '../core/transport.ts';
 import {daylightEnvironment} from './lighting.ts';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {sphereCenter,sphereRadius,metalHit,metalNormal,glassEntry,glassExit,lightHit,outsideGlass} from '../core/route.ts';
@@ -15,7 +15,7 @@ export function createCourtyard(){
  const world=new T.Group();world.name='Canyon observatory — landing, heliostat, optical window, beacon';scene.add(world);
  const materials:T.MeshStandardMaterial[]=[];
  const mat=(color:T.ColorRepresentation,roughness=.8,metalness=0)=>{const m=new T.MeshStandardMaterial({color,roughness,metalness,flatShading:true});materials.push(m);return m;};
- const sandstone=mat('#b37555'),goldStone=mat('#c99562'),deepStone=mat('#584e68'),shadowStone=mat('#67565a'),floor=mat('#ad9876'),dark=mat('#223642'),pale=mat('#ddd4ad'),orange=mat('#db7546'),steel=mat('#55787b',.5,.4),ochre=mat(materialPalette.diffuse,.82),bronze=mat(materialPalette.metal,.055,1);
+ const sandstone=mat('#b37555'),goldStone=mat('#c99562'),deepStone=mat('#584e68'),shadowStone=mat('#67565a'),floor=mat('#ad9876'),dark=mat('#223642'),pale=mat('#ddd4ad'),orange=mat('#db7546'),steel=mat('#55787b',.5,.4),ochre=mat(materialPalette.diffuse,.82),bronze=mat(materialPalette.metal,polishedRoughness,1);
  const mesh=(g:T.BufferGeometry,m:T.Material,p:Vec3,parent:T.Object3D=world)=>{const o=new T.Mesh(g,m);o.position.set(...p);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;};
  const box=(size:Vec3,p:Vec3,m:T.Material,parent:T.Object3D=world)=>mesh(new T.BoxGeometry(...size),m,p,parent);
  const cylinder=(r:number,h:number,p:Vec3,m:T.Material,parent:T.Object3D=world,segments=8)=>mesh(new T.CylinderGeometry(r,r,h,segments),m,p,parent);
@@ -50,9 +50,9 @@ export function createCourtyard(){
  strut([-4,-5,-.55],[4,5,-.55],.12,steel,gate);strut([-4,5,-.55],[4,-5,-.55],.12,steel,gate);
  cylinder(.45,5,[metalHit[0],19.3,metalHit[2]],steel);box([7,.55,7],[metalHit[0],17.4,metalHit[2]],floor);cylinder(1.5,.5,[metalHit[0],17.9,metalHit[2]],dark);
  // A thick, free-standing optical window makes entry and exit faces legible.
- const glass=new T.MeshPhysicalMaterial({color:'#d8f4e6',roughness:0,transmission:1,ior:1.5,thickness:observatory.glassThickness,attenuationColor:'#a9e6d3',attenuationDistance:50,side:T.FrontSide,depthWrite:false,flatShading:true});materials.push(glass);
+ const glass=new T.MeshPhysicalMaterial({color:'#d8f4e6',roughness:0,transmission:.95,transparent:true,opacity:.27,ior:1.5,thickness:observatory.glassThickness,attenuationColor:'#ffffff',attenuationDistance:Infinity,side:T.FrontSide,depthWrite:false,flatShading:true});materials.push(glass);
  const pane=box([11,12,observatory.glassThickness],[glassEntry[0],glassEntry[1],glassEntry[2]-observatory.glassThickness/2],glass);pane.name='Thick optical window — parallel interfaces, IOR 1.5';pane.castShadow=false;
- for(const x of [glassEntry[0]-5.9,glassEntry[0]+5.9])box([.65,13,4],[x,glassEntry[1],glassEntry[2]-1.5],steel);for(const y of [glassEntry[1]-6.3,glassEntry[1]+6.3])box([12.5,.65,4],[glassEntry[0],y,glassEntry[2]-1.5],pale);
+ for(const x of [glassEntry[0]-5.9,glassEntry[0]+5.9])box([.25,12.6,3.25],[x,glassEntry[1],glassEntry[2]-1.5],steel);for(const y of [glassEntry[1]-6.3,glassEntry[1]+6.3])box([12,.25,3.25],[glassEntry[0],y,glassEntry[2]-1.5],pale);
  box([18,.8,15],[62,28.8,-28],floor);for(const x of [57,67])box([.6,4,.6],[x,27,-28],steel);
  // Far beacon: its luminous aperture faces the transmitted selected ray.
  const d=new T.Vector3(...outsideGlass),beacon=new T.Group();beacon.position.set(...lightHit);beacon.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),d.clone().negate());world.add(beacon);
@@ -68,6 +68,10 @@ export function createCourtyard(){
  box([bridge.span+3,.6,bridge.width+1],[bridge.center[0],14.5,bridge.center[2]],dark);
  for(const x of [bridge.center[0]-bridge.span/2,bridge.center[0]+bridge.span/2]){
   box([6,1,10],[x,14.1,bridge.center[2]],floor);box([3,55,7],[x,-13.8,bridge.center[2]],shadowStone);
+ }
+ // The access/service line stays well below the selected optical corridors.
+ for(const [a,b] of [ [[-48,11.4,25],[7,16.8,34]], [[17,17.2,27],[55,28.4,-20]] ] as [Vec3,Vec3][]){
+  strut(a,b,.16,steel);strut([a[0],a[1]-.6,a[2]],[b[0],b[1]-.6,b[2]],.09,dark);
  }
  // Small red service markers add distance cues, not a competing installation.
  for(const [x,y,z] of [[-16,15,-48],[32,15,-48],[62,30,-28]]){box([.3,2,.3],[x,y+1,z+4],pale);box([.75,.35,.75],[x,y+2.1,z+4],orange);}

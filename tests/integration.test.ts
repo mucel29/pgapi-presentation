@@ -109,7 +109,7 @@ test('sample additions start new launches after earlier rays have finished; repl
  assert.equal(visuals.illustratedSampleCount,24);assert.equal(visuals.samples.children.filter(o=>o.visible).length,0);
 });
 
-test('mirror emissions and BVH ink stay distinguishable without transparent faint boxes',()=>{
+test('mirror emissions retain visible ordering and BVH gives active bounds priority',()=>{
  assert.equal(emissionProgress(0,0),0);assert.ok(emissionProgress(1,0)>emissionProgress(1,4));
  const visuals=new JourneyVisuals(createCourtyard()),b=beats.find(b=>b.id==='materials')!;
  visuals.apply(b);visuals.update(0,b.rayTo);
@@ -118,7 +118,7 @@ test('mirror emissions and BVH ink stay distinguishable without transparent fain
  visuals.setResolution(794,568);
  for(const box of visuals.boxObjects.values()){
   assert.deepEqual(box.ink.resolution.toArray(),[794,568]);
-  assert.equal(box.ink.opacity,1);assert.equal(box.ink.depthTest,false);
+  assert.ok(box.ink.opacity>0&&box.ink.opacity<=1);assert.equal(box.ink.depthTest,false);
   assert.ok(box.outline.linewidth>box.ink.linewidth);
  }
  assert.notEqual(bvhInk.active,bvhInk.child);assert.notEqual(bvhInk.child,bvhInk.rejected);

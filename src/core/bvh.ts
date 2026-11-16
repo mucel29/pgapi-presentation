@@ -1,6 +1,6 @@
 import {intersectAABB,intersectTriangle,sub,cross,dot,type Vec3,type Bounds} from './math.ts';
 export type Triangle=[Vec3,Vec3,Vec3];
-export interface Candidate{axis:number;plane:number;cost:number;left:number;right:number;}
+export interface Candidate{axis:number;plane:number;cost:number;left:number;right:number;leftArea:number;rightArea:number;parentArea:number;leftBounds:Bounds;rightBounds:Bounds;}
 export interface Node extends Bounds{id:number;depth:number;indices:number[];children?:[Node,Node];candidates:Candidate[];split?:Candidate;}
 export interface TraceEvent{node:Node;status:'hit'|'miss'|'pruned'|'leaf';boxTests:number;triangleTests:number;closest:number;triangle:number;stack:number[];}
 export function triangleBounds(t:Triangle):Bounds{return {min:[0,1,2].map(a=>Math.min(...t.map(p=>p[a]))) as Vec3,max:[0,1,2].map(a=>Math.max(...t.map(p=>p[a]))) as Vec3};}
@@ -14,8 +14,9 @@ export function buildSAH(triangles:Triangle[],leafSize=4,bins=16):Node{
       const lo=Math.min(...indices.map(i=>centroids[i][axis])),hi=Math.max(...indices.map(i=>centroids[i][axis]));if(hi-lo<1e-8)continue;
       for(let bin=1;bin<bins;bin++){
         const plane=lo+(hi-lo)*bin/bins,left=indices.filter(i=>centroids[i][axis]<plane),right=indices.filter(i=>centroids[i][axis]>=plane);if(!left.length||!right.length)continue;
-        const cost=1+(area(union(bounds,left))*left.length+area(union(bounds,right))*right.length)/Math.max(area(node),1e-12);
-        node.candidates.push({axis,plane,cost,left:left.length,right:right.length});
+        const leftBounds=union(bounds,left),rightBounds=union(bounds,right),leftArea=area(leftBounds),rightArea=area(rightBounds),parentArea=Math.max(area(node),1e-12);
+        const cost=1+(leftArea*left.length+rightArea*right.length)/parentArea;
+        node.candidates.push({axis,plane,cost,left:left.length,right:right.length,leftArea,rightArea,parentArea,leftBounds,rightBounds});
       }
     }
     node.split=node.candidates.reduce<Candidate|undefined>((best,c)=>!best||c.cost<best.cost?c:best,undefined);

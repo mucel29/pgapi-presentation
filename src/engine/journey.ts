@@ -12,7 +12,8 @@ import {weightDisplay} from '../core/transport.ts';
 import {type Vec3} from '../core/math';
 import {projectedPosition} from '../ui/layout';
 import {monitor,portalLens,portalCut} from '../core/portal';
-import {retroRaster} from '../core/raster';
+import {cameraPixel} from '../core/sampling.ts';
+import {retroRaster,explorerRaster} from '../core/raster';
 
 export class Journey{
  renderer:T.WebGLRenderer;camera=new T.PerspectiveCamera(43,1,.05,400);room=createRoom();courtyard=createCourtyard();visuals:JourneyVisuals;
@@ -37,9 +38,11 @@ export class Journey{
  replayShot(){this.setBeat(this.index,false,true);}
  setSceneViewport(rect:{left:number;top:number;width:number;height:number}){this.sceneViewport={...rect};this.resize();}
  projectPoint(point:Vec3){this.camera.updateMatrixWorld();const rect=this.canvas.getBoundingClientRect(),viewport=rect.width&&rect.height?rect:this.sceneViewport;return projectedPosition(new T.Vector3(...point).project(this.camera),viewport);}
- get primaryPixel(){return this.projectPoint(origin);}
+ get primaryPixel(){return this.projectPoint(cameraPixel.center);}
+ get cameraLabels(){return {origin:this.projectPoint(origin),pixel:this.projectPoint(cameraPixel.center),sample:this.projectPoint(cameraPixel.center),direction:this.projectPoint(cameraPixel.center.map((v,i)=>v+cameraPixel.forward[i]*4) as Vec3)};}
+ get graphicsStatus(){return this.supported?'raster':'raster-only';}
  get rayWeight(){return weightDisplay(throughput[Math.min(4,Math.max(0,Math.floor(this.visuals.progress)))]);}
- resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=retroRaster(width,height);this.renderer.setSize(size.width,size.height,false);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.canvas.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
+ resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=this.exploring?explorerRaster(width,height,this.pendingSettings.scale??1):retroRaster(width,height);this.renderer.setSize(size.width,size.height,false);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.canvas.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
  setBeat(index:number,immediate=false,replay=false){
   this.invalidateRaster();this.portalFrame=-1;this.index=Math.max(0,Math.min(beats.length-1,index));const b=this.beat,previous=beats[Math.max(0,this.index-1)];this.elapsed=0;this.transition=immediate?1:0;
   // A beat is a reproducible rail from its canonical predecessor, including
@@ -63,7 +66,7 @@ export class Journey{
   this.finale.start();this.pathTracing=true;return true;
  }
  stopTracing(){this.tracingRequests.invalidate();this.pathTracing=false;this.visuals.rasterOnly.visible=this.supported;this.finale?.stop();this.courtyard.setBeauty(true);this.resize();}
- setSettings(patch:Partial<RenderSettings>){Object.assign(this.pendingSettings,patch);this.finale?.setSettings(patch);}
+ setSettings(patch:Partial<RenderSettings>){Object.assign(this.pendingSettings,patch);this.finale?.setSettings(patch);if(patch.scale!==undefined&&this.exploring&&!this.pathTracing)this.resize();}
  returnToJourney(){this.stopTracing();this.exploring=false;this.controls.enabled=false;this.keys.clear();this.courtyard.setBeauty(false);this.visuals.root.visible=true;this.resize();this.setBeat(this.index,true);}
  pickBVH(clientX:number,clientY:number){const rect=this.canvas.getBoundingClientRect(),raycaster=new T.Raycaster();raycaster.setFromCamera(new T.Vector2((clientX-rect.left)/rect.width*2-1,1-(clientY-rect.top)/rect.height*2),this.camera);const hit=raycaster.intersectObject(this.courtyard.teaching,false)[0];if(!hit)return false;this.visuals.setRay(this.camera.position.toArray(),hit.point.clone().sub(this.camera.position).normalize().toArray());this.invalidateRaster();return true;}
  resetView(){this.camera.position.set(...finalView.camera);this.controls.target.set(...finalView.target);this.controls.update();this.finale?.invalidate();}
