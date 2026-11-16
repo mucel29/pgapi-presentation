@@ -20,14 +20,10 @@ function stretch(o:T.Mesh,a:Vec3,b:Vec3,f=1){const av=new T.Vector3(...a),bv=new
 function marker(color:number,r=.14){return new T.Mesh(new T.IcosahedronGeometry(r,1),new T.MeshBasicMaterial({color,toneMapped:false,transparent:true,depthWrite:false}));}
 function arrowTip(color:number){const tip=new T.Mesh(new T.ConeGeometry(.18,.6,6),new T.MeshBasicMaterial({color,toneMapped:false,transparent:true,depthWrite:false}));tip.renderOrder=13;return tip;}
 function reveal(v:{mesh:T.Mesh;a:Vec3;b:Vec3;tip?:T.Mesh},fraction:number){const f=Math.max(0,Math.min(1,fraction));stretch(v.mesh,v.a,v.b,f);if(v.tip){v.tip.visible=f>.08;v.tip.position.lerpVectors(new T.Vector3(...v.a),new T.Vector3(...v.b),f);v.tip.quaternion.copy(v.mesh.quaternion);}}
-function textLabel(text:string,color='#f4f1d9',scale=3){
- const material=new T.SpriteMaterial({color,depthTest:false,depthWrite:false,toneMapped:false,transparent:true});
- if(typeof document!=='undefined'){
-  const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;const ctx=canvas.getContext('2d')!;
-  ctx.fillStyle='rgba(9,24,30,.88)';ctx.fillRect(0,0,512,96);ctx.font='bold 42px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=color;ctx.fillText(text,256,49);
-  material.map=new T.CanvasTexture(canvas);material.map.minFilter=T.LinearFilter;material.color.set('white');
- }
- const sprite=new T.Sprite(material);sprite.scale.set(scale*512/96,scale,1);sprite.renderOrder=35;return sprite;
+// Text is rendered as crisp DOM after projection; these invisible anchors
+// remain attached to the exact world feature that the label describes.
+function textLabel(text:string,color='#f4f1d9',_scale=3){
+ const anchor=new T.Object3D();anchor.userData.guide={text,color};return anchor;
 }
 function boundWire(bounds:{min:Vec3;max:Vec3},color:number){
  const min=new T.Vector3(...bounds.min),max=new T.Vector3(...bounds.max),box=new T.Box3(min,max),helper=new T.Box3Helper(box,color);
@@ -39,10 +35,18 @@ export class JourneyVisuals{
  testRayOrigin:Vec3=[0,0,0];testRayDirection:Vec3=[0,0,-1];rayCase='hit';private traceResult:ReturnType<typeof traceSAH>;private testBeam:T.Mesh;private hitMesh:T.Mesh;private hitOutline:T.LineLoop;private hitPoint=marker(0xff70b8,.13);private hitId=-2;private highlightKey='';
  private fans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private sampleLines:{mesh:T.Mesh;a:Vec3;b:Vec3;index:number;startedAt:number;tip:T.Mesh}[]=[];private mirrorFans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private highlight:T.Mesh;private elapsed=0;private userSelected=false;private splitPlane:T.Mesh;candidateIndex=0;
  room:Courtyard;
+ sampleStations=new T.Group();private sampleMarkers:T.Mesh[]=[];private splitLabel=textLabel('plan X','#ffc576');
  cameraRig=new T.Group();glassRig=new T.Group();selection=new T.Group();slabContacts=new T.Group();sahVolumes=new T.Group();
  private normalEvents:T.Group[]=[];private reflectionProof=new T.Group();private diffuseSelected:T.Mesh;private mirrorSelected:T.Mesh;
  illustrativeDepth=8;loopStage=0;
  private loopVertex=marker(0xffdf38,.38);private returnMarker=marker(0xffc576,.22);private slabNear=marker(0x8cdbb4,.35);private slabFar=marker(0xffc576,.35);
+ get guideAnchors(){
+  const anchors:{id:string;text:string;color:string;point:Vec3}[]=[];
+  this.root.updateMatrixWorld(true);this.root.traverseVisible(o=>{
+   const guide=o.userData.guide as {text:string;color:string}|undefined;
+   if(guide)anchors.push({id:o.uuid,...guide,point:o.getWorldPosition(new T.Vector3()).toArray() as Vec3});
+  });return anchors;
+ }
  get loopState(){return loopStageState(this.loopStage);}
  setLoopStage(index:number){this.loopStage=Math.max(0,Math.min(6,Math.floor(index)));this.revision++;this.update(this.elapsed,this.progress);}
  setFlowStage(index:number){this.setLoopStage(index);}
@@ -54,7 +58,7 @@ export class JourneyVisuals{
   this.testRayOrigin=[...room.rayOrigin];this.testRayDirection=[...room.rayDirection];this.traceResult=room.traversal;this.root.name='Illustrations — excluded from path tracing';room.scene.add(this.root);const mirror=new Reflector(new T.PlaneGeometry(9,10),{textureWidth:256,textureHeight:256,color:0xb4a68c,clipBias:.003,multisample:0});mirror.position.set(...route[2]).addScaledVector(new T.Vector3(...metalNormal),.025);mirror.quaternion.copy(surfaceRotation(metalNormal));const renderMirror=mirror.onBeforeRender.bind(mirror);mirror.onBeforeRender=(renderer,scene,camera,geometry,material,group)=>{const rv=room.reflector.visible,fv=room.reflectorFrame.visible,iv=this.root.visible;room.reflector.visible=false;room.reflectorFrame.visible=false;this.root.visible=false;try{renderMirror(renderer,scene,camera,geometry,material,group);}finally{room.reflector.visible=rv;room.reflectorFrame.visible=fv;this.root.visible=iv;}};mirror.name='Raster planar reflection — excluded from tracer';this.rasterOnly.name='Raster reflections';room.scene.add(this.rasterOnly);this.rasterOnly.add(mirror);
   (this.headHalo.material as T.MeshBasicMaterial).opacity=.15;this.headHalo.renderOrder=13;this.packet.renderOrder=15;this.contact.renderOrder=14;
   this.root.add(this.headHalo,this.tail,this.tailHalo,this.contact);
-  this.root.add(this.path,this.hemisphere,this.samples,this.normals,this.boxes,this.wire,this.materialRays,this.shadow,this.packet,this.cameraRig,this.glassRig,this.selection,this.slabContacts,this.sahVolumes,this.loopVertex,this.returnMarker,this.reflectionProof);
+  this.root.add(this.path,this.hemisphere,this.samples,this.normals,this.boxes,this.wire,this.materialRays,this.shadow,this.packet,this.cameraRig,this.glassRig,this.selection,this.slabContacts,this.sahVolumes,this.loopVertex,this.returnMarker,this.reflectionProof,this.sampleStations,this.splitLabel);
   const {center,right,up,footprint}=cameraPixel;
   // A flat image plane, never a 3D frustum. All cells and q share the sampler basis.
   const pixelGrid=new T.Group();this.cameraRig.add(pixelGrid);
@@ -78,6 +82,11 @@ export class JourneyVisuals{
    corners.forEach((a,i)=>{const line=beam(color,.035,.8);stretch(line,a,corners[(i+1)%4]);face.add(line);});
    const contact=marker(color,.2);contact.position.set(...point);face.add(contact);
    const label=textLabel(index?'ieșire · aer':'intrare · aer → sticlă',index?'#ffc576':'#9ce7ed',1.25);label.position.set(...add(point,[0,index?-5.2:5.2,0]));face.add(label);this.glassRig.add(face);
+  }
+  for(const [index,point] of route.entries()){
+   const mark=marker(index===5?0xffdf70:0xffffff,.18);mark.position.set(...point);(mark.material as T.MeshBasicMaterial).depthTest=false;mark.renderOrder=18;this.sampleMarkers.push(mark);this.sampleStations.add(mark);
+   if(index===4)continue;
+   const text=['o · cameră','difuz','oglindă','sticlă','','sursă'][index],label=textLabel(text,index===5?'#ffdf70':'#eef4df');label.position.set(...point);this.sampleStations.add(label);
   }
   // Macro-normal reflection is exact. The narrow fan uses the same .055 roughness as the mirror.
   const inDir=normalize(sub(route[1],route[2])),outDir=normalize(sub(route[3],route[2])),n=new T.Vector3(...metalNormal);
@@ -136,7 +145,11 @@ export class JourneyVisuals{
  fitHead(camera:T.PerspectiveCamera,height:number){
   const pixelScale=(position:T.Vector3,radius:number,pixels:number)=>Math.max(.6,2*Math.tan(T.MathUtils.degToRad(camera.fov)/2)*camera.position.distanceTo(position)/Math.max(1,height)*pixels/radius);
   const scale=pixelScale(this.packet.position,.2,2.6);this.packet.scale.setScalar(scale);this.headHalo.scale.setScalar(scale);
-  for(const line of this.sampleLines)line.tip.scale.setScalar(pixelScale(line.tip.position,.19,2.1));
+  const overview=this.beat?.visual==='samples';
+  for(const segment of this.segments){const size=overview?pixelScale(segment.position,.07,.55):1;segment.scale.x=segment.scale.z=size;}
+  for(const mark of this.sampleMarkers)mark.scale.setScalar(pixelScale(mark.position,.18,1.25));
+  for(const line of this.sampleLines){line.tip.scale.setScalar(pixelScale(line.tip.position,.19,overview?1.1:2.1));const size=overview?pixelScale(line.mesh.position,.065,.25):1;line.mesh.scale.x=line.mesh.scale.z=size;}
+
  }
  get splitCandidates(){const candidates=[...this.tree.candidates].sort((a,b)=>a.cost-b.cost);return [candidates[0],candidates[Math.floor(candidates.length/3)],candidates[Math.floor(candidates.length*2/3)]];}
  setSplitCandidate(index:number){this.candidateIndex=Math.max(0,Math.min(2,index));this.revision++;this.updateBoxes();}
@@ -177,7 +190,8 @@ export class JourneyVisuals{
     const label=textLabel(index?'R':'L',index?'#ffc576':'#9ce7ed',1.3);label.position.set(...bounds.max);this.sahVolumes.add(label);
    }
   }
-  if(c==='sah'&&split){const size=new T.Vector3(...this.tree.max).sub(new T.Vector3(...this.tree.min));this.splitPlane.position.set(...this.tree.min).addScaledVector(size,.5);this.splitPlane.position.setComponent(split.axis,split.plane);this.splitPlane.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().setComponent(split.axis,1));this.splitPlane.scale.set(split.axis===0?size.z:size.x,split.axis===1?size.z:size.y,1);}
+  this.splitLabel.visible=c==='sah';if(c==='sah'&&split){this.splitLabel.userData.guide.text=`plan ${'XYZ'[split.axis]}`;this.splitLabel.position.copy(this.splitPlane.position);}
+  if(c==='sah'&&split){const size=new T.Vector3(...this.tree.max).sub(new T.Vector3(...this.tree.min));this.splitPlane.position.set(...this.tree.min).addScaledVector(size,.5);this.splitPlane.position.setComponent(split.axis,split.plane);this.splitPlane.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().setComponent(split.axis,1));this.splitPlane.scale.set(split.axis===0?size.z:size.x,split.axis===1?size.z:size.y,1);this.splitLabel.position.copy(this.splitPlane.position);}
   const indices=c==='sah'&&split?this.tree.indices.filter(i=>{const tri=this.room.triangles[i],values=tri.map(p=>p[split.axis]);return (Math.min(...values)+Math.max(...values))/2<split.plane;}):c==='traversal'&&event?.status==='leaf'?event.node.indices:active?.indices??[];this.highlight.visible=this.boxes.visible&&indices.length>0;
   const key=indices.join(',');if(key!==this.highlightKey){this.highlightKey=key;const positions=indices.flatMap(i=>this.room.triangles[i].flat());this.highlight.geometry.dispose();this.highlight.geometry=new T.BufferGeometry();this.highlight.geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));}
   const hit=this.currentHit,id=hit?.triangle??-1;this.hitMesh.visible=this.hitOutline.visible=this.hitPoint.visible=['cost','bvh','sah','aabb','traversal'].includes(c)&&id>=0;
@@ -193,9 +207,10 @@ export class JourneyVisuals{
   this.loopVertex.visible=c==='loop'&&this.loopStage>=1;this.loopVertex.position.set(...route[1]);
   this.slabContacts.visible=c==='aabb';this.sahVolumes.visible=c==='sah';
   if(c==='aabb'){const interval=slabIntervals(this.testRayOrigin,this.testRayDirection,this.tree.min,this.tree.max);this.slabNear.visible=this.slabFar.visible=interval.hit;if(interval.hit){this.slabNear.position.set(...add(this.testRayOrigin,mul(this.testRayDirection,interval.near)));this.slabFar.position.set(...add(this.testRayOrigin,mul(this.testRayDirection,interval.far)));}}
-  this.splitPlane.visible=c==='sah';this.path.visible=!bvh;this.packet.visible=!bvh&&c!=='room'&&c!=='samples';this.hemisphere.visible=c==='diffuse';this.samples.visible=c==='samples';this.normals.visible=['diffuse','materials'].includes(c)||this.beat?.motion==='glass';this.normalEvents.forEach((group,i)=>group.visible=c==='diffuse'?i===0:this.beat?.motion==='glass'?i>=2:i===1);this.materialRays.visible=c==='materials'&&!this.beat?.travel&&progress>=2;this.shadow.visible=c==='loop'&&this.loopStage===3;this.wire.visible=bvh;this.boxes.visible=['bvh','sah','aabb','traversal'].includes(c);
+  this.splitLabel.visible=c==='sah';this.splitPlane.visible=c==='sah';this.path.visible=!bvh;this.packet.visible=!bvh&&c!=='room'&&c!=='samples';this.hemisphere.visible=c==='diffuse';this.samples.visible=c==='samples';this.normals.visible=['diffuse','materials'].includes(c)||this.beat?.motion==='glass';this.normalEvents.forEach((group,i)=>group.visible=c==='diffuse'?i===0:this.beat?.motion==='glass'?i>=2:i===1);this.materialRays.visible=c==='materials'&&!this.beat?.travel&&progress>=2;this.shadow.visible=c==='loop'&&this.loopStage===3;this.wire.visible=bvh;this.boxes.visible=['bvh','sah','aabb','traversal'].includes(c);
   const shownProgress=c==='samples'?selectedPathEstimate(this.illustrativeDepth).segments:c==='loop'?(this.loopStage===0?.2:this.loopStage<6?1:1.3):progress;
-  this.segments.forEach((m,i)=>{stretch(m,route[i],route[i+1],Math.max(0,Math.min(1,shownProgress-i)));(m.material as T.MeshBasicMaterial).opacity=c==='loop'?.7:c==='samples'?.9:.4;});
+  this.sampleStations.visible=c==='samples';this.sampleMarkers.forEach((mark,i)=>mark.visible=i<=shownProgress);
+  this.segments.forEach((m,i)=>{(m.material as T.MeshBasicMaterial).depthTest=c!=='samples';(m.material as T.MeshBasicMaterial).fog=c!=='samples';stretch(m,route[i],route[i+1],Math.max(0,Math.min(1,shownProgress-i)));(m.material as T.MeshBasicMaterial).opacity=c==='loop'?.7:c==='samples'?.9:.4;});
   this.cameraRig.visible=c==='ray'||c==='light'&&!this.beat?.travel;
   this.glassRig.visible=this.beat?.motion==='glass';this.selection.visible=['diffuse','materials','loop'].includes(c);
   this.diffuseSelected.visible=c==='diffuse'||c==='loop'&&this.loopStage>=4;this.mirrorSelected.visible=c==='materials'&&!this.beat?.travel;this.reflectionProof.visible=this.mirrorSelected.visible;

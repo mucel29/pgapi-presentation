@@ -16,7 +16,7 @@ import {cameraPixel} from '../core/sampling.ts';
 import {retroRaster,explorerRaster} from '../core/raster';
 
 export class Journey{
- renderer:T.WebGLRenderer;camera=new T.PerspectiveCamera(43,1,.05,400);room=createRoom();courtyard=createCourtyard();visuals:JourneyVisuals;
+ renderer:T.WebGLRenderer;camera=new T.PerspectiveCamera(43,1,.05,1000);room=createRoom();courtyard=createCourtyard();visuals:JourneyVisuals;
  pendingSettings:Partial<RenderSettings>={};controls:OrbitControls;finale:Finale|null=null;exploring=false;pathTracing=false;paused=false;supported:boolean;index=0;fps=0;elapsed=0;transition=1;
  private sceneViewport={left:0,top:0,width:1,height:1};private keys=new Set<string>();private previous=0;private active=true;private from=new T.Vector3();private fromTarget=new T.Vector3();private target=new T.Vector3();private portalFrom:[number,number,number]=[...portalStart];private monitorPosition:[number,number,number]=[...portalStart];
  private tracingRequests=new RequestGeneration();private drawKey='';private portalAspect=-1;private portalFrame=-1;private portalCamera=new T.PerspectiveCamera(43,1.66/1.06,.05,400);private portalTarget=new T.WebGLRenderTarget(480,306);
@@ -40,6 +40,7 @@ export class Journey{
  projectPoint(point:Vec3){this.camera.updateMatrixWorld();const rect=this.canvas.getBoundingClientRect(),viewport=rect.width&&rect.height?rect:this.sceneViewport;return projectedPosition(new T.Vector3(...point).project(this.camera),viewport);}
  get primaryPixel(){return this.projectPoint(cameraPixel.center);}
  get cameraLabels(){return {origin:this.projectPoint(origin),pixel:this.projectPoint(cameraPixel.center),sample:this.projectPoint(cameraPixel.center),direction:this.projectPoint(cameraPixel.center.map((v,i)=>v+cameraPixel.forward[i]*4) as Vec3)};}
+ get guideLabels(){return this.visuals.guideAnchors.map(({point,...label})=>({...label,...this.projectPoint(point)}));}
  get graphicsStatus(){return this.supported?'raster':'raster-only';}
  get rayWeight(){return weightDisplay(throughput[Math.min(4,Math.max(0,Math.floor(this.visuals.progress)))]);}
  resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=this.exploring?explorerRaster(width,height,this.pendingSettings.scale??1):retroRaster(width,height);this.renderer.setSize(size.width,size.height,false);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.canvas.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
@@ -78,13 +79,17 @@ export class Journey{
   const visible=this.visuals.root.visible;this.visuals.root.visible=false;this.renderer.setRenderTarget(this.portalTarget);this.renderer.render(this.courtyard.scene,this.portalCamera);this.renderer.setRenderTarget(null);this.visuals.root.visible=visible;
  }
  private updateTransition(t:number){
-  const b=this.beat,previous=beats[Math.max(0,this.index-1)],state=shotPose(b,previous,t,this.camera.aspect);
+  const b=this.beat,previous=beats[Math.max(0,this.index-1)],state=shotPose(b,previous,t,this.camera.aspect,this.canvas.getBoundingClientRect().width||this.sceneViewport.width);
   if(b.scene==='portal'){
    if(t<portalCut){
     const pose=roomApproachPose(t,this.camera.aspect,this.from.toArray(),this.fromTarget.toArray());this.camera.position.set(...pose.position);this.target.set(...pose.target);
    }else {const pose=portalWorldPose(t,this.portalFrom);this.camera.position.set(...pose.position);this.target.set(...pose.target);}
 
   }else {this.camera.position.set(...state.position);this.target.set(...state.target);}
+  // The wide samples view needs the actual canyon visible beyond the usual
+  // close-flight fog range. Interpolate it with the camera pullback/arrival.
+  const fogMix=b.visual==='samples'?state.camera:previous.visual==='samples'?1-state.camera:0;
+  if(this.courtyard.scene.fog instanceof T.Fog){this.courtyard.scene.fog.near=T.MathUtils.lerp(155,450,fogMix);this.courtyard.scene.fog.far=T.MathUtils.lerp(380,900,fogMix);}
   this.camera.clearViewOffset();this.camera.lookAt(this.target);
  }
  captureAt(t:number){this.transition=Math.max(0,Math.min(1,t));this.elapsed=this.beat.seconds*this.transition;this.updateTransition(this.transition);const state=shotState(this.beat.motion??'arrive',this.transition,this.beat.rayFrom,this.beat.rayTo);this.visuals.update(this.elapsed,state.ray);this.visuals.fitHead(this.camera,this.canvas.height);this.paused=true;this.invalidateRaster();}

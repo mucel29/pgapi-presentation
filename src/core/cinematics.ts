@@ -47,16 +47,16 @@ export function portalWorldPose(t:number,start:Vec3=portalStart){
  return {position,target:portalAim};
 }
 
-export interface ShotDefinition {camera:Vec3;target:Vec3;portraitCamera?:Vec3;portraitTarget?:Vec3;via?:Vec3[];aimVia?:Vec3[];motion?:ShotMotion;rayFrom:number;rayTo:number;layout:string;visual:string;}
+export interface ShotDefinition {compactCamera?:Vec3;compactTarget?:Vec3;camera:Vec3;target:Vec3;portraitCamera?:Vec3;portraitTarget?:Vec3;via?:Vec3[];aimVia?:Vec3[];motion?:ShotMotion;rayFrom:number;rayTo:number;layout:string;visual:string;}
 
 function rail(points:Vec3[],t:number):Vec3{
  if(points.every(p=>Math.hypot(...sub(p,points[0]))<1e-9))return [...points[0]];
  return new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)),false,'centripetal').getPointAt(clamp01(t)).toArray() as Vec3;
 }
-export function shotPose(shot:ShotDefinition,previous:ShotDefinition,t:number,aspect=16/9){
+export function shotPose(shot:ShotDefinition,previous:ShotDefinition,t:number,aspect=16/9,viewportWidth=1280){
  const state=shotState(shot.motion??'arrive',t,shot.rayFrom,shot.rayTo);
  if(shot.motion==='portal')return {...portalWorldPose(t),...state};
- const fromCamera=aspect<.9?previous.portraitCamera??previous.camera:previous.camera,toCamera=aspect<.9?shot.portraitCamera??shot.camera:shot.camera,fromTarget=aspect<.9?previous.portraitTarget??previous.target:previous.target,toTarget=aspect<.9?shot.portraitTarget??shot.target:shot.target;
+ const compact=viewportWidth<1000&&aspect>1.5,fromCamera=aspect<.9?previous.portraitCamera??previous.camera:compact?previous.compactCamera??previous.camera:previous.camera,toCamera=aspect<.9?shot.portraitCamera??shot.camera:compact?shot.compactCamera??shot.camera:shot.camera,fromTarget=aspect<.9?previous.portraitTarget??previous.target:compact?previous.compactTarget??previous.target:previous.target,toTarget=aspect<.9?shot.portraitTarget??shot.target:compact?shot.compactTarget??shot.target:shot.target;
  if(shot.motion==='travel'||shot.motion==='launch'){
   const fromHead=routePoint(shot.rayFrom),toHead=routePoint(shot.rayTo),head=routePoint(state.ray),blend=state.camera;
   const fromOffset=sub(fromCamera,fromHead),toOffset=sub(toCamera,toHead),fromAim=sub(fromTarget,fromHead),toAim=sub(toTarget,toHead);

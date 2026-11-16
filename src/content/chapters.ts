@@ -4,7 +4,7 @@ export type Layout='scene'|'technical'|'travel';
 export interface SlideCopy {title:string;intro:string;points:string[];formula:string;}
 export interface Chapter {slide:SlideCopy;id:string;section:string;title:string;accent:string;intro:string;points:string[];formula:string;formulaNote:string;code:string;codeLabel:string;codeSource:string;notes:string;sources:string[];camera:Vec3;target:Vec3;visual:string;duration:string;layout:Layout;}
 import type {ShotMotion} from '../core/cinematics';
-export interface Beat {motion?:ShotMotion;aimVia?:Vec3[];portraitCamera?:Vec3;portraitTarget?:Vec3;id:string;chapter:string;scene:'room'|'courtyard'|'portal';camera:Vec3;target:Vec3;via?:Vec3[];rayFrom:number;rayTo:number;visual:string;seconds:number;layout:Layout;travel:boolean;captureTime:number;captureStep?:number;title?:string;intro?:string;}
+export interface Beat {compactCamera?:Vec3;compactTarget?:Vec3;motion?:ShotMotion;aimVia?:Vec3[];portraitCamera?:Vec3;portraitTarget?:Vec3;id:string;chapter:string;scene:'room'|'courtyard'|'portal';camera:Vec3;target:Vec3;via?:Vec3[];rayFrom:number;rayTo:number;visual:string;seconds:number;layout:Layout;travel:boolean;captureTime:number;captureStep?:number;title?:string;intro?:string;}
 export const sources = {
   "reference": "https://mucel29.github.io/egc-presentation/",
   "weekend": "https://raytracing.github.io/books/RayTracingInOneWeekend.html",
