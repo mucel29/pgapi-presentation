@@ -65,16 +65,17 @@ export function createCourtyard(){
  // Real bridge/truss: all 144 faces form the exact shared BVH primitive set.
  const teachingData=createTeachingData(),teaching=mesh(teachingData.geometry,orange,[0,0,0]);teaching.name='Canyon bridge truss — 144 actual triangles';
  const bridge=observatory.bridge;
- box([bridge.span+3,.6,bridge.width+1],[bridge.center[0],14.5,bridge.center[2]],dark);
+ const bridgeFloor=bridge.center[1]-bridge.height/2-.5;
+ box([bridge.span+3,.6,bridge.width+1],[bridge.center[0],bridgeFloor,bridge.center[2]],dark);
  for(const x of [bridge.center[0]-bridge.span/2,bridge.center[0]+bridge.span/2]){
-  box([6,1,10],[x,14.1,bridge.center[2]],floor);box([3,55,7],[x,-13.8,bridge.center[2]],shadowStone);
+  box([6,1,10],[x,bridgeFloor-.4,bridge.center[2]],floor);box([3,bridgeFloor+70,7],[x,(bridgeFloor-70)/2,bridge.center[2]],shadowStone);
  }
  // The access/service line stays well below the selected optical corridors.
  for(const [a,b] of [ [[-48,11.4,25],[7,16.8,34]], [[17,17.2,27],[55,28.4,-20]] ] as [Vec3,Vec3][]){
   strut(a,b,.16,steel);strut([a[0],a[1]-.6,a[2]],[b[0],b[1]-.6,b[2]],.09,dark);
  }
  // Small red service markers add distance cues, not a competing installation.
- for(const [x,y,z] of [[-16,15,-48],[32,15,-48],[62,30,-28]]){box([.3,2,.3],[x,y+1,z+4],pale);box([.75,.35,.75],[x,y+2.1,z+4],orange);}
+ for(const [x,y,z] of [[bridge.center[0]-bridge.span/2,bridgeFloor,bridge.center[2]],[bridge.center[0]+bridge.span/2,bridgeFloor,bridge.center[2]],[62,30,-28]]){box([.3,2,.3],[x,y+1,z+4],pale);box([.75,.35,.75],[x,y+2.1,z+4],orange);}
  scene.add(new T.HemisphereLight('#adc9da','#594441',1.05));
  const sun=new T.DirectionalLight('#ffddb1',3.2);sun.position.set(-95,140,75);sun.target.position.set(20,10,-20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-175,right:175,top:150,bottom:-140,far:440});sun.shadow.normalBias=.1;sun.shadow.bias=-.0001;scene.add(sun,sun.target);
  scene.environment=daylightEnvironment();scene.environmentIntensity=.32;scene.updateMatrixWorld(true);

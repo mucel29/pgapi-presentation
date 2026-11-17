@@ -11,6 +11,7 @@ import {cosineHemisphere,normalize,sub,add,mul,reflect,rng,type Vec3} from '../c
 import {route,throughput,diffuseNormal,metalNormal,glassNormal,origin} from '../core/route.ts';
 import {traceSAH,type Node} from '../core/bvh.ts';
 import {loopStageState,selectedPathEstimate} from '../core/lesson-state.ts';
+import {lessonScale,lessonOffset,lessonPoint} from '../core/lesson-space.ts';
 import {slabIntervals} from '../core/experiments.ts';
 import type {Beat} from '../content/chapters.ts';
 import type {Courtyard} from './courtyard.ts';
@@ -36,10 +37,12 @@ export class JourneyVisuals{
  private fans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private sampleLines:{mesh:T.Mesh;a:Vec3;b:Vec3;index:number;startedAt:number;tip:T.Mesh}[]=[];private mirrorFans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private highlight:T.Mesh;private elapsed=0;private userSelected=false;private splitPlane:T.Mesh;candidateIndex=0;
  room:Courtyard;
  sampleStations=new T.Group();private sampleMarkers:T.Mesh[]=[];private splitLabel=textLabel('plan X','#ffc576');
+ lesson=new T.Group();private lessonSurfaces=new T.Group();private lessonCamera=new T.Group();private lessonLabel=textLabel('model · același pixel','#eef4df');
  cameraRig=new T.Group();glassRig=new T.Group();selection=new T.Group();slabContacts=new T.Group();sahVolumes=new T.Group();
  private normalEvents:T.Group[]=[];private reflectionProof=new T.Group();private diffuseSelected:T.Mesh;private mirrorSelected:T.Mesh;
  illustrativeDepth=8;loopStage=0;
  private loopVertex=marker(0xffdf38,.38);private returnMarker=marker(0xffc576,.22);private slabNear=marker(0x8cdbb4,.35);private slabFar=marker(0xffc576,.35);
+ get returnedPixelPoint():Vec3{return add(route[5],[-3,5,0]);}
  get guideAnchors(){
   const anchors:{id:string;text:string;color:string;point:Vec3}[]=[];
   this.root.updateMatrixWorld(true);this.root.traverseVisible(o=>{
@@ -72,6 +75,21 @@ export class JourneyVisuals{
   const q=marker(0xffdf70,.08);q.position.set(...center);this.cameraRig.add(q);
   const direction=beam(0xffdf70,.035);stretch(direction,origin,add(center,mul(cameraPixel.forward,2)));this.cameraRig.add(direction);
   this.returnMarker.position.set(...center);this.returnMarker.material=new T.MeshBasicMaterial({color:new T.Color(...selectedPathEstimate().contribution),toneMapped:true});
+  const returnedPixel=textLabel('ΔL → pixel q · RGB','#ffc576');returnedPixel.position.set(0,1,0);this.returnMarker.add(returnedPixel);
+  // This is a miniature of the original camera/path, not a second camera
+  // origin in the canyon. Uniform scale preserves sampled directions/hits.
+  this.lessonCamera=this.cameraRig.clone(true);
+  this.lesson.add(this.path,this.samples,this.sampleStations,this.shadow,this.selection,this.loopVertex,this.lessonCamera,this.lessonSurfaces);
+  this.root.add(this.lesson,this.lessonLabel);
+  this.lessonLabel.position.set(...add(lessonPoint(origin),[3,3,0]));
+  for(const [geometry,point,color,normal] of [
+   [new T.SphereGeometry(3.6,12,8),this.room.sphere.position.toArray(),0x43bdd9,null],
+   [new T.PlaneGeometry(9,10),route[2],0xa8b88c,metalNormal],
+   [new T.BoxGeometry(11,12,3),add(route[3],[0,0,-1.5]),0x74d9ec,null],
+   [new T.PlaneGeometry(10,9),route[5],0xffdf70,normalize(sub(route[4],route[5]))],
+  ] as [T.BufferGeometry,Vec3,number,Vec3|null][]){
+   const surface=new T.Mesh(geometry,new T.MeshBasicMaterial({color,transparent:true,opacity:.4,side:T.DoubleSide,wireframe:true,depthWrite:false}));surface.position.set(...point);if(normal)surface.quaternion.copy(surfaceRotation(normal));this.lessonSurfaces.add(surface);
+  }
   this.slabContacts.add(this.slabNear,this.slabFar);
   const nearLabel=textLabel('tNear','#8cdbb4',1.2),farLabel=textLabel('tFar','#ffc576',1.2);nearLabel.position.y=1.5;farLabel.position.y=-1.5;this.slabNear.add(nearLabel);this.slabFar.add(farLabel);
   this.diffuseSelected=beam(0xffdf70,.065,.95);stretch(this.diffuseSelected,route[1],add(route[1],mul(normalize(sub(route[2],route[1])),8)));this.selection.add(this.diffuseSelected);
@@ -145,10 +163,10 @@ export class JourneyVisuals{
  fitHead(camera:T.PerspectiveCamera,height:number){
   const pixelScale=(position:T.Vector3,radius:number,pixels:number)=>Math.max(.6,2*Math.tan(T.MathUtils.degToRad(camera.fov)/2)*camera.position.distanceTo(position)/Math.max(1,height)*pixels/radius);
   const scale=pixelScale(this.packet.position,.2,2.6);this.packet.scale.setScalar(scale);this.headHalo.scale.setScalar(scale);
-  const overview=this.beat?.visual==='samples';
-  for(const segment of this.segments){const size=overview?pixelScale(segment.position,.07,.55):1;segment.scale.x=segment.scale.z=size;}
-  for(const mark of this.sampleMarkers)mark.scale.setScalar(pixelScale(mark.position,.18,1.25));
-  for(const line of this.sampleLines){line.tip.scale.setScalar(pixelScale(line.tip.position,.19,overview?1.1:2.1));const size=overview?pixelScale(line.mesh.position,.065,.25):1;line.mesh.scale.x=line.mesh.scale.z=size;}
+  const overview=this.beat?.visual==='samples'||this.beat?.visual==='loop',world=(point:T.Vector3)=>overview?new T.Vector3(...lessonPoint(point.toArray() as Vec3)):point;
+  for(const segment of this.segments){const size=overview?pixelScale(world(segment.position),.07*lessonScale,.55):1;segment.scale.x=segment.scale.z=size;}
+  for(const mark of this.sampleMarkers)mark.scale.setScalar(pixelScale(world(mark.position),.18*(overview?lessonScale:1),1.25));
+  for(const line of this.sampleLines){line.tip.scale.setScalar(pixelScale(world(line.tip.position),.19*(overview?lessonScale:1),overview?1.1:2.1));const size=overview?pixelScale(world(line.mesh.position),.065*lessonScale,.25):1;line.mesh.scale.x=line.mesh.scale.z=size;}
 
  }
  get splitCandidates(){const candidates=[...this.tree.candidates].sort((a,b)=>a.cost-b.cost);return [candidates[0],candidates[Math.floor(candidates.length/3)],candidates[Math.floor(candidates.length*2/3)]];}
@@ -200,6 +218,7 @@ export class JourneyVisuals{
  }
  update(elapsed:number,progress:number){
   this.elapsed=elapsed;this.progress=progress;const c=this.beat?.visual??'';const bvh=['cost','bvh','sah','aabb','traversal'].includes(c);
+  const local=c==='samples'||c==='loop';this.lesson.scale.setScalar(local?lessonScale:1);this.lesson.position.set(...(local?lessonOffset:[0,0,0] as Vec3));this.lessonSurfaces.visible=this.lessonCamera.visible=this.lessonLabel.visible=local;
   this.cameraRig.visible=['ray','samples','light'].includes(c);this.returnMarker.visible=c==='light'&&!this.beat?.travel;
   this.glassRig.visible=this.beat?.motion==='glass';this.selection.visible=['diffuse','materials','loop'].includes(c);
   this.diffuseSelected.visible=c==='diffuse'||c==='loop'&&this.loopStage>=4;this.mirrorSelected.visible=c==='materials';
@@ -211,10 +230,13 @@ export class JourneyVisuals{
   const shownProgress=c==='samples'?selectedPathEstimate(this.illustrativeDepth).segments:c==='loop'?(this.loopStage===0?.2:this.loopStage<6?1:1.3):progress;
   this.sampleStations.visible=c==='samples';this.sampleMarkers.forEach((mark,i)=>mark.visible=i<=shownProgress);
   this.segments.forEach((m,i)=>{(m.material as T.MeshBasicMaterial).depthTest=c!=='samples';(m.material as T.MeshBasicMaterial).fog=c!=='samples';stretch(m,route[i],route[i+1],Math.max(0,Math.min(1,shownProgress-i)));(m.material as T.MeshBasicMaterial).opacity=c==='loop'?.7:c==='samples'?.9:.4;});
-  this.cameraRig.visible=c==='ray'||c==='light'&&!this.beat?.travel;
+  this.cameraRig.visible=c==='ray';
   this.glassRig.visible=this.beat?.motion==='glass';this.selection.visible=['diffuse','materials','loop'].includes(c);
   this.diffuseSelected.visible=c==='diffuse'||c==='loop'&&this.loopStage>=4;this.mirrorSelected.visible=c==='materials'&&!this.beat?.travel;this.reflectionProof.visible=this.mirrorSelected.visible;
   this.returnMarker.visible=c==='light'&&!this.beat?.travel;
+  // Keep the accumulated pixel beside the source, rather than flying the
+  // observer back across the canyon to the original image plane.
+  this.returnMarker.position.set(...this.returnedPixelPoint);
   this.loopVertex.visible=c==='loop'&&this.loopStage>=1;this.loopVertex.position.set(...route[1]);(this.loopVertex.material as T.MeshBasicMaterial).color.set(this.loopStage===3?0xff6654:this.loopStage>=5?0x43bdd9:0xffdf38);
   this.slabContacts.visible=c==='aabb';this.sahVolumes.visible=c==='sah';
   if(c==='aabb'){

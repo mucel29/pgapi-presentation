@@ -57,3 +57,14 @@ test('long selected air legs reach their intended material without newly introdu
   assert.equal(ray.intersectObject(court.world,true).length,0,`unintended contact on leg ${leg}`);assert.ok(length>=40);
  }
 });
+test('forward observer rails after glass do not cross physical canyon architecture',()=>{
+ const court=createCourtyard(),ray=new T.Raycaster();
+ for(const aspect of [16/9,9/16])for(const id of ['samples','cost','noise','to-light']){
+  const i=beats.findIndex(b=>b.id===id),b=beats[i];let previous=new T.Vector3(...shotPose(b,beats[i-1],0,aspect).position);
+  for(let k=1;k<=80;k++){
+   const point=new T.Vector3(...shotPose(b,beats[i-1],k/80,aspect).position),direction=point.clone().sub(previous),distance=direction.length();
+   if(distance>.00001){ray.set(previous,direction.normalize());ray.far=distance;assert.equal(ray.intersectObject(court.world,true).length,0,`${id}: camera meets architecture at ${k/80}`);}
+   previous=point;
+  }
+ }
+});

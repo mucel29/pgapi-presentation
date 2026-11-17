@@ -16,11 +16,11 @@ test('selected material route obeys diffuse hemisphere, reflection and glass ent
 });
 test('triangle SAH closest hits match brute force and the production BVH library',()=>{
  const {geometry:geo,triangles}=createTeachingData();
- const tree=buildSAH(triangles),library=new MeshBVH(geo.clone(),{strategy:SAH,maxLeafTris:4}),random=rng(817);let saved=0;
- for(let i=0;i<250;i++){const o:[number,number,number]=[(random()-.5)*70,12+random()*20,-3],d=normalize([(random()-.5)*28,(random()-.5)*12,-45]);const a=traceSAH(tree,triangles,o,d),b=traceTriangles(triangles,o,d),c=library.raycastFirst(new T.Ray(new T.Vector3(...o),new T.Vector3(...d)),T.DoubleSide);
- if(Number.isFinite(b.closest)){close(a.closest,b.closest);close(a.closest,c.distance);}else{assert.equal(a.closest,Infinity);assert.equal(c,null);}saved+=triangles.length-a.triangleTests;
+ const tree=buildSAH(triangles),library=new MeshBVH(geo.clone(),{strategy:SAH,maxLeafTris:4}),random=rng(817),center=observatory.bridge.center;let saved=0,hits=0;
+ for(let i=0;i<250;i++){const o:[number,number,number]=[center[0]+(random()-.5)*70,center[1]-7+random()*20,center[2]+45],d=normalize([(random()-.5)*28,(random()-.5)*12,-45]);const a=traceSAH(tree,triangles,o,d),b=traceTriangles(triangles,o,d),c=library.raycastFirst(new T.Ray(new T.Vector3(...o),new T.Vector3(...d)),T.DoubleSide);
+ if(Number.isFinite(b.closest)){hits++;close(a.closest,b.closest);close(a.closest,c!.distance);}else{assert.equal(a.closest,Infinity);assert.equal(c,null);}saved+=triangles.length-a.triangleTests;
  assert.equal(a.boxTests,a.events.reduce((count,e)=>count+(e.status==='hit'?2:0),1));
- }assert.ok(saved>10000);assert.ok(tree.candidates.length>0);
+ }assert.ok(hits>0,'queries exercise real hits on the relocated bridge');assert.ok(saved>10000);assert.ok(tree.candidates.length>0);
 });
 test('manifest contains 15 independent topics and four extra travel beats',()=>{
  assert.equal(chapters.length,15);assert.equal(beats.length,19);assert.equal(beats.filter(b=>b.travel).length,4);assert.equal(new Set(beats.map(b=>b.id)).size,19);

@@ -8,6 +8,7 @@ import {route,origin,throughput,metalNormal} from '../src/core/route.ts';
 import {materialPalette,linearRGB,weightDisplay} from '../src/core/transport.ts';
 import {emissionProgress,reflectionSamples,bvhInk} from '../src/core/visual-sequence.ts';
 import {illustratedSamples} from '../src/core/sampling.ts';
+import {lessonPoint} from '../src/core/lesson-space.ts';
 import {createCourtyard} from '../src/engine/courtyard.ts';
 import {JourneyVisuals} from '../src/engine/visuals.ts';
 
@@ -56,14 +57,11 @@ test('canyon focal objects and primary sample paths remain visible in full-scene
   assert.equal(reflectionSamples(new T.Vector3(...route[2]).sub(new T.Vector3(...route[1])).normalize().toArray(),metalNormal).length,12);
   const sample=cameraAt('samples',1,aspect).camera;
   for(const path of illustratedSamples())for(const fraction of [0,.1,.5,1]){
-   const point=new T.Vector3(...path.origin).lerp(new T.Vector3(...path.end),fraction);
+   const original=new T.Vector3(...path.origin).lerp(new T.Vector3(...path.end),fraction),point=new T.Vector3(...lessonPoint(original.toArray()));
    assert.ok(inFrame(point.clone().project(sample)),'primary launch and first hit stay visible');
    const direction=point.clone().sub(sample.position),distance=direction.length();ray.set(sample.position,direction.normalize());ray.far=distance-.12;
    const opaque=ray.intersectObject(court.world,true).filter(h=>h.object.visible&&!(h.object.material as T.MeshPhysicalMaterial).transmission);
-   // The wide witness can see a sampled contact on the receiver's far side.
-   // Its primary teaching overlay is intentionally depth-independent; unrelated
-   // architecture must still leave the camera-to-first-hit corridor clear.
-   assert.ok(opaque.every(h=>fraction===1&&h.object===court.sphere),'primary launch has no unrelated scene occluder');
+   assert.equal(opaque.length,0,'local sample model has no unrelated scene occluder');
   }
  }
 });
