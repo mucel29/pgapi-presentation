@@ -5,9 +5,9 @@ import {route,glassNormal,insideGlass,outsideGlass} from '../core/route.ts';
 export function pixelGrid(values:number[],width:number,height:number,x:number,y:number,cell=10){
  return `<g transform="translate(${x} ${y})">${values.map((v,i)=>{const c=Math.round(30+v*215);return `<rect x="${i%width*cell}" y="${Math.floor(i/width)*cell}" width="${cell+.1}" height="${cell+.1}" fill="rgb(${Math.round(c*.91)},${c},${Math.round(c*.92)})"/>`;}).join('')}<rect width="${width*cell}" height="${height*cell}" fill="none" stroke="#8aaca2"/></g>`;
 }
-export function accumulationIllustration(samples:number){
- const data=accumulationExperiment(samples);
- return {data,svg:`<svg viewBox="0 0 500 205" role="img" aria-label="Estimarea unui semnal sintetic la ${samples} samples, comparată cu semnalul cunoscut"><text x="20" y="24">${samples} ${samples===1?'sample':'samples'} / pixel</text><text x="280" y="24">Semnal cunoscut</text>${pixelGrid(data.estimate,20,12,20,44)}${pixelGrid(data.truth,20,12,280,44)}<text x="20" y="194" class="experiment-metric">RMSE ${data.rmse.toFixed(3)}</text><text x="280" y="194">N → ∞</text></svg>`};
+export function accumulationIllustration(samples:number,view=0){
+ const data=accumulationExperiment(samples,20,12,view);
+ return {data,svg:`<svg viewBox="0 0 500 205" role="img" aria-label="Estimarea unui semnal sintetic la ${samples} samples, comparată cu semnalul cunoscut"><text x="20" y="24">${samples===0?'Istoric gol':samples} ${samples===0?'':samples===1?'sample':'samples'} ${samples===0?'':'/ pixel'}</text><text x="280" y="24">Semnal cunoscut</text>${pixelGrid(data.estimate,20,12,20,44)}${pixelGrid(data.truth,20,12,280,44)}<rect x="120" y="104" width="10" height="10" fill="none" stroke="#ffd091" stroke-width="2"/><rect x="380" y="104" width="10" height="10" fill="none" stroke="#ffd091" stroke-width="2"/><text x="20" y="194" class="experiment-metric">RMSE ${samples?data.rmse.toFixed(3):'—'}</text><text x="280" y="194">N → ∞</text></svg>`};
 }
 export function glassIllustration(revealed:boolean){
  const incoming=normalize(sub(route[3],route[2])),angle=(d:Vec3)=>Math.acos(Math.min(1,Math.abs(dot(d,glassNormal))))*180/Math.PI;

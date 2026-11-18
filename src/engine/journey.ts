@@ -39,9 +39,8 @@ export class Journey{
  replayShot(){this.setBeat(this.index,false,true);}
  setSceneViewport(rect:{left:number;top:number;width:number;height:number}){this.sceneViewport={...rect};this.resize();}
  projectPoint(point:Vec3){this.camera.updateMatrixWorld();const rect=this.canvas.getBoundingClientRect(),viewport=rect.width&&rect.height?rect:this.sceneViewport;return projectedPosition(new T.Vector3(...point).project(this.camera),viewport);}
- get primaryPixel(){return this.projectPoint(this.beat.id==='light'?this.contributionPixel:cameraPixel.center);}
- private get contributionPixel():Vec3{return this.visuals.returnedPixelPoint;}
- get cameraLabels(){if(this.beat.id==='light')return {pixel:this.primaryPixel};return {origin:this.projectPoint(origin),pixel:this.projectPoint(cameraPixel.center),sample:this.projectPoint(cameraPixel.center),direction:this.projectPoint(cameraPixel.center.map((v,i)=>v+cameraPixel.forward[i]*4) as Vec3)};}
+ get primaryPixel(){return this.projectPoint(cameraPixel.center);}
+ get cameraLabels(){return {origin:this.projectPoint(origin),pixel:this.primaryPixel,sample:this.primaryPixel,direction:this.projectPoint(cameraPixel.center.map((v,i)=>v+cameraPixel.forward[i]*4) as Vec3)};}
  get guideLabels(){return this.visuals.guideAnchors.map(({point,...label})=>({...label,...this.projectPoint(point)}));}
  get graphicsStatus(){return this.supported?'raster':'raster-only';}
  get rayWeight(){return weightDisplay(throughput[Math.min(4,Math.max(0,Math.floor(this.visuals.progress)))]);}
@@ -57,6 +56,7 @@ export class Journey{
   this.transitionShot=!immediate&&!replay&&b.motion==='hold'&&this.camera.position.distanceTo(new T.Vector3(...destination.position))>1?{...b,motion:'arrive',seconds:2}:b;
   this.from.set(...this.transitionFrom.camera);this.fromTarget.set(...this.transitionFrom.target);
   if(b.scene==='portal'&&!replay)this.portalFrom=immediate?[...portalStart]:[...this.monitorPosition];
+  this.visuals.root.visible=!['image','samples','loop','noise','denoise'].includes(b.id);
   this.visuals.apply(b);if(immediate||this.transitionShot.seconds===0||matchMedia('(prefers-reduced-motion: reduce)').matches)this.finish();else this.updateTransition(0);
  }
  finish(){const b=this.beat;this.transition=1;this.elapsed=b.travel?b.seconds:0;this.updateTransition(1);this.visuals.update(this.elapsed,b.rayTo);this.visuals.fitHead(this.camera,this.canvas.height);this.invalidateRaster();}

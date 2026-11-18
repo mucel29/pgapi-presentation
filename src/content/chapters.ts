@@ -236,95 +236,6 @@ export const chapters:Chapter[] = [
     }
   },
   {
-    "codeSource": "GLSL didactic · bucla exterioară de sampling",
-    "sources": [
-      "https://raytracing.github.io/books/RayTracingInOneWeekend.html"
-    ],
-    "duration": "1:00",
-    "id": "samples",
-    "section": "SAMPLING",
-    "title": "Samples și bounces",
-    "accent": "SAMPLES ≠ BOUNCES",
-    "intro": "Un sample este o estimare pentru pixel, construită dintr-un traseu. Bounces limitează cât de departe poate continua acel traseu.",
-    "points": [
-      "Jitter alege o poziție subpixel. BSDF și light sampling aleg alte variabile de-a lungul traseului.",
-      "32 samples înseamnă 32 estimări pentru pixel, chiar dacă fiecare permite până la 8 bounces.",
-      "Limita de bounces controlează transportul inclus. Un număr mai mare de samples reduce variația estimării.",
-      "Într-un path tracer obișnuit continuăm câte o direcție BSDF la fiecare bounce. Nu construim un arbore exhaustiv de reflexii."
-    ],
-    "formula": "L̂ = (L₁ + L₂ + … + Lₙ) / N",
-    "formulaNote": "Evantai schematic · numărul liniilor nu indică SPP",
-    "code": "vec3 color = vec3(0.0);\nfor (int s = 0; s < samples; s++) {\n  Ray ray = generateCameraRay(pixel, random2());\n  color += tracePath(ray, maxBounces);\n}\ncolor /= float(samples);",
-    "codeLabel": "GLSL · estimare Monte Carlo (schematic)",
-    "notes": "Compară două reglaje: 32 samples cu maximum 2 bounces și 32 samples cu maximum 8 bounces. Numărul estimărilor rămâne 32. În a doua variantă, fiecare traseu poate include mai multă iluminare indirectă și poate costa mai mult. Samples per pixel nu se obține înmulțind samples cu bounces. Nici fiecare segment desenat înseamnă un sample nou. O limită fixă mică de bounces poate omite contribuții reale, deci acumularea unui număr oricât de mare de samples nu repară acea trunchiere. O parte dintre trasee se pot termina înainte de limită, de exemplu la miss sau prin Russian roulette. În explorator, BSDF principal are un buget separat de cele 8 traversări transmisive suplimentare. Produsul samples × segmente este doar plafonul modelului didactic și exclude umbrele.",
-    "camera": [
-      -33,
-      10,
-      34
-    ],
-    "target": [
-      -23,
-      4,
-      13
-    ],
-    "visual": "samples",
-    "layout": "technical",
-    "slide": {
-      "title": "Samples și bounces",
-      "intro": "32 samples × 8 bounces înseamnă tot 32 estimări.",
-      "points": [
-        "Sample: un traseu estimat pentru pixel",
-        "Bounces: limita interacțiunilor pe traseu"
-      ],
-      "formula": "L̂ = (1/N) Σ Lᵢ"
-    }
-  },
-  {
-    "codeSource": "Pseudocod; renderer real: three-gpu-pathtracer 0.0.23 · PhysicalPathTracingMaterial",
-    "sources": [
-      "https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer",
-      "https://github.com/gkjohnson/three-gpu-pathtracer/tree/v0.0.23"
-    ],
-    "duration": "1:40",
-    "id": "loop",
-    "section": "IMPLEMENTARE",
-    "title": "Bucla de path tracing",
-    "accent": "RADIANCE L · THROUGHPUT β",
-    "intro": "Bucla păstrează două mărimi: L adună contribuțiile, iar β transportă ponderea cu care vor intra contribuțiile următoare.",
-    "points": [
-      "La o suprafață emisivă adăugăm β·Le în L. La miss evaluăm environment-ul.",
-      "Direct lighting alege o sursă și verifică vizibilitatea cu un shadow ray. MIS combină această estimare cu BSDF sampling.",
-      "La un material continuăm cu un sample BSDF și actualizăm β. Pentru o distribuție continuă, factorul este f·|n·ω|/pdf.",
-      "Originea noii raze trebuie deplasată robust de pe suprafață. Russian roulette poate termina traseele cu ponderare compensată."
-    ],
-    "formula": "L ← L + β·contribuție;   β ← β·f·|n·ω|/pdf",
-    "formulaNote": "L: sumă · β: pondere multiplicativă",
-    "code": "vec3 L = vec3(0.0), beta = vec3(1.0);\nfor (int b = 0; b < maxBounces; b++) {\n  Hit h = intersectScene(ray);\n  if (!h.found) { L += beta * environmentMIS(ray); break; }\n  L += beta * emittedMIS(h);\n  L += beta * estimateDirectMIS(h); // shadow ray\n  BSDFSample s = sampleBSDF(h, ray);\n  if (!s.valid) break;\n  beta *= s.weight; // f * abs(n·wi) / pdf, pentru BSDF continuu\n  ray = spawnOffsetRay(h, s.direction);\n}",
-    "codeLabel": "Pseudocod · starea unui singur path",
-    "notes": "Urmează întâi β: la început (1,1,1), după diffuse se înmulțește cu albedo, iar materialul următor o modifică din nou. L poate rămâne zero până apare o contribuție de la o sursă sau environment. Direct lighting poate adăuga lumină înainte ca traseul principal să lovească sursa. Shadow ray este o interogare de vizibilitate, nu continuarea BSDF a path-ului. Pentru MIS, helper-ele din pseudocod includ ponderile adecvate la emisie și environment, ca să nu dublăm contribuția estimată și prin light sampling. s.weight ascunde tratarea specială a distribuțiilor delta și a transmisiei. Russian roulette nu apare în snippet: dacă supraviețuirea are probabilitatea p, ponderea supraviețuitorului devine β/p. Această compensare păstrează media, spre deosebire de tăierea arbitrară a contribuțiilor mici. Shaderul real este PhysicalPathTracingMaterial din versiunea 0.0.23, nu codul compact de aici.",
-    "camera": [
-      -7,
-      17,
-      30
-    ],
-    "target": [
-      4,
-      5,
-      3
-    ],
-    "visual": "loop",
-    "layout": "technical",
-    "slide": {
-      "title": "Bucla de path tracing",
-      "intro": "L adună contribuțiile. β le păstrează ponderea.",
-      "points": [
-        "La material: alegem direcția și actualizăm β",
-        "La lumină: adăugăm o contribuție în L"
-      ],
-      "formula": "β *= f·|n·ω|/pdf"
-    }
-  },
-  {
     "codeSource": "Pseudocod echivalent cu src/core/bvh.ts · traceTriangles",
     "sources": [
       "https://pbr-book.org/4ed/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies"
@@ -334,17 +245,17 @@ export const chapters:Chapter[] = [
     "section": "ACCELERARE",
     "title": "Costul intersecțiilor",
     "accent": "BRUTE FORCE · O(N) / RAZĂ",
-    "intro": "La 1920 × 1080, 64 samples și până la 6 interacțiuni, bucla poate cere aproximativ 796 de milioane de interogări closest-hit pentru o imagine.",
+    "intro": "Fiecare segment cere cel mai apropiat hit. Oprim traseul optic și inspectăm separat o interogare pe cele 144 de triunghiuri ale punții.",
     "points": [
       "Brute force repetă testul pentru fiecare triunghi al scenei la fiecare interogare.",
       "Puntea este construită din triunghiuri reale; numărăm exact testele.",
       "Un BVH trebuie să păstreze același closest-hit cu mai puține teste de primitive."
     ],
-    "formula": "1920 × 1080 × 64 × 6 ≈ 796 milioane",
-    "formulaNote": "Buget ilustrativ de interogări · fără shadow rays",
+    "formula": "1 interogare → 144 teste brute force",
+    "formulaNote": "Aceeași rază de test, același closest-hit.",
     "code": "float closest = INF;\nfor (int i = 0; i < triangleCount; i++) {\n  float t = intersectTriangle(ray, triangles[i]);\n  if (t > EPSILON && t < closest) {\n    closest = t;\n    hitTriangle = i;\n  }\n}",
     "codeLabel": "GLSL · căutare liniară (schematic)",
-    "notes": "Fă mai întâi calculul pentru o imagine, fără numărul de triunghiuri. La 1920×1080 avem 2.073.600 pixeli. Înmulțirea cu 64 samples și 6 interogări de-a lungul fiecărui traseu dă 796.262.400 cereri closest-hit. Este un buget ilustrativ, nu un benchmark sau un număr de teste măsurat. Brute force ar mai înmulți acest cost cu numărul triunghiurilor. Shadow rays nu sunt incluse, iar terminarea timpurie reduce unele trasee. Restrângem acum problema la triunghiurile reale ale punții: comparăm răspunsul geometric și numărul testelor, fără să deducem un FPS din ele.",
+    "notes": "Pauză în traseul optic după sticlă. Raza de test de pe punte este o interogare separată, nu continuarea optică. Puntea are 12 grinzi × 12 triunghiuri = 144 primitive. Brute force le testează pe toate pentru o singură interogare closest-hit. BVH elimină grupuri prin cutii și trebuie să păstreze același hit. Numerele din demonstrație sunt teste geometrice, nu un benchmark FPS. După traversare reluăm traseul selectat până la sursă.",
     "camera": [
       -14,
       15,
@@ -359,12 +270,12 @@ export const chapters:Chapter[] = [
     "layout": "technical",
     "slide": {
       "title": "Costul intersecțiilor",
-      "intro": "Un cadru poate cere 796 milioane de interogări.",
+      "intro": "Un segment. O interogare. 144 de triunghiuri.",
       "points": [
-        "1920 × 1080 · 64 samples · până la 6 interacțiuni",
-        "Brute force verifică toate triunghiurile la fiecare rază"
+        "Traseul optic este în pauză",
+        "Raza de test a punții este separată"
       ],
-      "formula": "teste ∝ raze × triunghiuri"
+      "formula": "1 interogare → 144 teste brute force"
     }
   },
   {
@@ -547,6 +458,139 @@ export const chapters:Chapter[] = [
     }
   },
   {
+    "codeSource": "src/core/lesson-state.ts · selectedPathEstimate",
+    "sources": [
+      "https://github.com/gkjohnson/three-gpu-pathtracer/tree/v0.0.23",
+      "https://github.com/gkjohnson/three-mesh-bvh/tree/v0.8.3",
+      "https://research.nvidia.com/labs/rtr/publication/schied2017spatiotemporal/"
+    ],
+    "duration": "0:45",
+    "id": "light",
+    "section": "TRASEU COMPLET",
+    "title": "Contribuția la pixel",
+    "accent": "CONTRIBUȚIA TRASEULUI",
+    "intro": "Traseul selectat ajunge la o suprafață emisivă. Înmulțim emisia ei cu ponderea acumulată și adăugăm contribuția la estimarea pixelului.",
+    "points": [
+      "Intersecțiile și materialele au construit traseul. Emisia îl transformă într-o contribuție de lumină.",
+      "BVH a redus munca pentru intersecții, păstrând răspunsul geometric.",
+      "Un traseu complet produce o estimare. Urmează cadrul camerei inițiale, apoi media mai multor estimări."
+    ],
+    "formula": "L ← L + β · Le",
+    "formulaNote": "Contribuție pentru un traseu. Pixelul final este media multor estimări.",
+    "code": "vec3 contribution = beta * emission;\nL += contribution;\n// Un traseu complet → o estimare pentru pixelul q.",
+    "codeLabel": "Contribuția traseului selectat",
+    "notes": "Revino la întrebarea din camera cu biroul: „Ce culoare primește pixelul?” Acest traseu aduce β·Le, iar altele pot aduce contribuții diferite sau zero. Schimbarea culorii suprafeței diffuse ar modifica ponderea contribuției. Eliminarea BVH-ului ar modifica numărul testelor, dar trebuie să păstreze același hit. Sampling-ul și denoising-ul afectează variația și reconstrucția imaginii în moduri diferite. Închide lecția înainte de explorare. Canionul poate fi explorat imediat rasterizat. Start path tracing încarcă explicit rendererul 0.0.23, apoi construiește scena și începe acumularea. Nicio inițializare, compilare sau randare path-traced nu se face automat în timpul prezentării. La mișcare, modul real folosește până la 320×180 și două bounces. După aproximativ 400 ms de stabilitate revine la rezoluția configurată și implicit opt bounces, cu resetarea acumulării la schimbarea modului.",
+    "camera": [
+      31,
+      12,
+      -5
+    ],
+    "target": [
+      42,
+      6,
+      -19
+    ],
+    "visual": "light",
+    "layout": "scene",
+    "slide": {
+      "title": "Contribuția la pixel",
+      "intro": "Emisia sursei intră în pixel cu ponderea întregului traseu.",
+      "points": [
+        "Acesta este un sample. Imaginea cere o medie."
+      ],
+      "formula": "L ← L + β · Le"
+    }
+  },
+  {
+    "codeSource": "GLSL didactic · bucla exterioară de sampling",
+    "sources": [
+      "https://raytracing.github.io/books/RayTracingInOneWeekend.html"
+    ],
+    "duration": "1:00",
+    "id": "samples",
+    "section": "SAMPLING",
+    "title": "Samples și bounces",
+    "accent": "SAMPLES ≠ BOUNCES",
+    "intro": "Un sample este o estimare pentru pixel, construită dintr-un traseu. Bounces limitează cât de departe poate continua acel traseu.",
+    "points": [
+      "Jitter alege o poziție subpixel. BSDF și light sampling aleg alte variabile de-a lungul traseului.",
+      "32 samples înseamnă 32 estimări pentru pixel, chiar dacă fiecare permite până la 8 bounces.",
+      "Limita de bounces controlează transportul inclus. Un număr mai mare de samples reduce variația estimării.",
+      "Într-un path tracer obișnuit continuăm câte o direcție BSDF la fiecare bounce. Nu construim un arbore exhaustiv de reflexii."
+    ],
+    "formula": "L̂ = (L₁ + L₂ + … + Lₙ) / N",
+    "formulaNote": "Trasee schematice complete · contribuții RGB ilustrative, separate de renderer",
+    "code": "vec3 color = vec3(0.0);\nfor (int s = 0; s < samples; s++) {\n  Ray ray = generateCameraRay(pixel, random2());\n  color += tracePath(ray, maxBounces);\n}\ncolor /= float(samples);",
+    "codeLabel": "GLSL · estimare Monte Carlo (schematic)",
+    "notes": "Compară două reglaje: 32 samples cu maximum 2 bounces și 32 samples cu maximum 8 bounces. Numărul estimărilor rămâne 32. În a doua variantă, fiecare traseu poate include mai multă iluminare indirectă și poate costa mai mult. Samples per pixel nu se obține înmulțind samples cu bounces. Nici fiecare segment desenat înseamnă un sample nou. O limită fixă mică de bounces poate omite contribuții reale, deci acumularea unui număr oricât de mare de samples nu repară acea trunchiere. O parte dintre trasee se pot termina înainte de limită, de exemplu la miss sau prin Russian roulette. În explorator, BSDF principal are un buget separat de cele 8 traversări transmisive suplimentare. Produsul samples × segmente este doar plafonul modelului didactic și exclude umbrele.",
+    "camera": [
+      -33,
+      10,
+      34
+    ],
+    "target": [
+      -23,
+      4,
+      13
+    ],
+    "visual": "samples",
+    "layout": "technical",
+    "slide": {
+      "title": "Samples și bounces",
+      "intro": "Mai multe samples adaugă estimări. Mai multe bounces prelungesc fiecare traseu.",
+      "points": [
+        "Sample: un traseu estimat pentru pixel",
+        "Bounces: limita interacțiunilor pe traseu"
+      ],
+      "formula": "L̂ = (1/N) Σ Lᵢ"
+    }
+  },
+  {
+    "codeSource": "Pseudocod; renderer real: three-gpu-pathtracer 0.0.23 · PhysicalPathTracingMaterial",
+    "sources": [
+      "https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer",
+      "https://github.com/gkjohnson/three-gpu-pathtracer/tree/v0.0.23"
+    ],
+    "duration": "1:40",
+    "id": "loop",
+    "section": "IMPLEMENTARE",
+    "title": "Bucla de path tracing",
+    "accent": "RADIANCE L · THROUGHPUT β",
+    "intro": "Bucla păstrează două mărimi: L adună contribuțiile, iar β transportă ponderea cu care vor intra contribuțiile următoare.",
+    "points": [
+      "La o suprafață emisivă adăugăm β·Le în L. La miss evaluăm environment-ul.",
+      "Direct lighting alege o sursă și verifică vizibilitatea cu un shadow ray. MIS combină această estimare cu BSDF sampling.",
+      "La un material continuăm cu un sample BSDF și actualizăm β. Pentru o distribuție continuă, factorul este f·|n·ω|/pdf.",
+      "Originea noii raze trebuie deplasată robust de pe suprafață. Russian roulette poate termina traseele cu ponderare compensată."
+    ],
+    "formula": "L ← L + β·contribuție;   β ← β·f·|n·ω|/pdf",
+    "formulaNote": "L: sumă · β: pondere multiplicativă",
+    "code": "vec3 L = vec3(0.0), beta = vec3(1.0);\nfor (int b = 0; b < maxBounces; b++) {\n  Hit h = intersectScene(ray);\n  if (!h.found) { L += beta * environmentMIS(ray); break; }\n  L += beta * emittedMIS(h);\n  L += beta * estimateDirectMIS(h); // shadow ray\n  BSDFSample s = sampleBSDF(h, ray);\n  if (!s.valid) break;\n  beta *= s.weight; // f * abs(n·wi) / pdf, pentru BSDF continuu\n  ray = spawnOffsetRay(h, s.direction);\n}",
+    "codeLabel": "Pseudocod · starea unui singur path",
+    "notes": "Urmează întâi β: la început (1,1,1), după diffuse se înmulțește cu albedo, iar materialul următor o modifică din nou. L poate rămâne zero până apare o contribuție de la o sursă sau environment. Direct lighting poate adăuga lumină înainte ca traseul principal să lovească sursa. Shadow ray este o interogare de vizibilitate, nu continuarea BSDF a path-ului. Pentru MIS, helper-ele din pseudocod includ ponderile adecvate la emisie și environment, ca să nu dublăm contribuția estimată și prin light sampling. s.weight ascunde tratarea specială a distribuțiilor delta și a transmisiei. Russian roulette nu apare în snippet: dacă supraviețuirea are probabilitatea p, ponderea supraviețuitorului devine β/p. Această compensare păstrează media, spre deosebire de tăierea arbitrară a contribuțiilor mici. Shaderul real este PhysicalPathTracingMaterial din versiunea 0.0.23, nu codul compact de aici. Bucla exterioară repetă sample-uri pentru același pixel. Demonstrația trece de la o iterație difuză la rezumatul contactelor deja urmărite, termină la sursă și apoi salvează contribuția în medie. Buget ulterior: 1920 × 1080 × 64 samples × până la 6 interogări ≈ 796 milioane cereri closest-hit, fără shadow rays; nu este benchmark.",
+    "camera": [
+      -7,
+      17,
+      30
+    ],
+    "target": [
+      4,
+      5,
+      3
+    ],
+    "visual": "loop",
+    "layout": "technical",
+    "slide": {
+      "title": "Bucla de path tracing",
+      "intro": "L adună contribuțiile. β le păstrează ponderea.",
+      "points": [
+        "La material: alegem direcția și actualizăm β",
+        "La lumină: adăugăm o contribuție în L"
+      ],
+      "formula": "β *= f·|n·ω|/pdf"
+    }
+  },
+  {
     "codeSource": "src/engine/finale.ts",
     "sources": [
       "https://raytracing.github.io/books/RayTracingInOneWeekend.html",
@@ -635,50 +679,6 @@ export const chapters:Chapter[] = [
         "Mai multă filtrare poate pierde detalii"
       ],
       "formula": "à-trous: pas 1 → 2 → 4"
-    }
-  },
-  {
-    "codeSource": "src/engine/finale.ts",
-    "sources": [
-      "https://github.com/gkjohnson/three-gpu-pathtracer/tree/v0.0.23",
-      "https://github.com/gkjohnson/three-mesh-bvh/tree/v0.8.3",
-      "https://research.nvidia.com/labs/rtr/publication/schied2017spatiotemporal/"
-    ],
-    "duration": "0:45",
-    "id": "light",
-    "section": "RECAPITULARE",
-    "title": "Sursa de lumină și explorarea",
-    "accent": "CONTRIBUȚIA TRASEULUI",
-    "intro": "Traseul selectat ajunge la o suprafață emisivă. Înmulțim emisia ei cu ponderea acumulată și adăugăm contribuția la estimarea pixelului.",
-    "points": [
-      "Intersecțiile și materialele au construit traseul. Emisia îl transformă într-o contribuție de lumină.",
-      "BVH a redus munca pentru intersecții, păstrând răspunsul geometric.",
-      "Media multor samples construiește imaginea. Explorarea cu path tracing poate începe explicit, după lecție."
-    ],
-    "formula": "L ← L + β · Le",
-    "formulaNote": "Contribuție pentru un traseu. Pixelul final este media multor estimări.",
-    "code": "// Numai după Start explicit:\nawait finale.prepare();\nfinale.start();\n// La mișcare: rezoluție mică, 2 bounces BSDF.\n// După stabilizare: rezoluția aleasă, implicit 8 BSDF.\n// Separat: +8 traversări transmisive; umbrele se adaugă.\n// Schimbarea estimatorului resetează acumularea.",
-    "codeLabel": "Pseudocod · politica explorării opționale",
-    "notes": "Revino la întrebarea din camera cu biroul: „Ce culoare primește pixelul?” Acest traseu aduce β·Le, iar altele pot aduce contribuții diferite sau zero. Schimbarea culorii suprafeței diffuse ar modifica ponderea contribuției. Eliminarea BVH-ului ar modifica numărul testelor, dar trebuie să păstreze același hit. Sampling-ul și denoising-ul afectează variația și reconstrucția imaginii în moduri diferite. Închide lecția înainte de explorare. Canionul poate fi explorat imediat rasterizat. Start path tracing încarcă explicit rendererul 0.0.23, apoi construiește scena și începe acumularea. Nicio inițializare, compilare sau randare path-traced nu se face automat în timpul prezentării. La mișcare, modul real folosește până la 320×180 și două bounces. După aproximativ 400 ms de stabilitate revine la rezoluția configurată și implicit opt bounces, cu resetarea acumulării la schimbarea modului.",
-    "camera": [
-      31,
-      12,
-      -5
-    ],
-    "target": [
-      42,
-      6,
-      -19
-    ],
-    "visual": "light",
-    "layout": "scene",
-    "slide": {
-      "title": "Contribuția la pixel",
-      "intro": "Emisia sursei intră în pixel cu ponderea întregului traseu.",
-      "points": [
-        "Acesta este un sample. Imaginea cere o medie."
-      ],
-      "formula": "L ← L + β · Le"
     }
   }
 ];
@@ -915,62 +915,6 @@ export const beats:Beat[] = [
     ]
   },
   {
-    "id": "samples",
-    "chapter": "samples",
-    "scene": "courtyard",
-    "camera": [
-      39,
-      12,
-      -19
-    ],
-    "target": [
-      -36,
-      4,
-      16
-    ],
-    "rayFrom": 4.18,
-    "rayTo": 4.18,
-    "visual": "samples",
-    "seconds": 1.8,
-    "layout": "technical",
-    "travel": false,
-    "captureTime": 1,
-    "motion": "arrive",
-    "portraitCamera": [
-      32,
-      15,
-      -25
-    ],
-    "portraitTarget": [
-      -36,
-      4,
-      16
-    ]
-  },
-  {
-    "id": "loop",
-    "chapter": "loop",
-    "scene": "courtyard",
-    "camera": [
-      -24,
-      8,
-      -4
-    ],
-    "target": [
-      -12,
-      4,
-      -38
-    ],
-    "rayFrom": 4.18,
-    "rayTo": 4.18,
-    "visual": "loop",
-    "seconds": 1.8,
-    "layout": "technical",
-    "travel": false,
-    "captureTime": 1,
-    "motion": "arrive"
-  },
-  {
     "id": "cost",
     "chapter": "cost",
     "scene": "courtyard",
@@ -1099,64 +1043,6 @@ export const beats:Beat[] = [
     "motion": "hold"
   },
   {
-    "id": "noise",
-    "chapter": "noise",
-    "scene": "courtyard",
-    "camera": [
-      44,
-      7,
-      -14
-    ],
-    "target": [
-      61,
-      6,
-      -24
-    ],
-    "rayFrom": 4.18,
-    "rayTo": 4.18,
-    "visual": "noise",
-    "seconds": 2.8,
-    "layout": "technical",
-    "travel": false,
-    "captureTime": 1,
-    "via": [
-      [
-        12,
-        12,
-        -10
-      ],
-      [
-        33,
-        8,
-        -10
-      ]
-    ],
-    "motion": "arrive"
-  },
-  {
-    "id": "denoise",
-    "chapter": "denoise",
-    "scene": "courtyard",
-    "camera": [
-      44,
-      7,
-      -14
-    ],
-    "target": [
-      61,
-      6,
-      -24
-    ],
-    "rayFrom": 4.18,
-    "rayTo": 4.18,
-    "visual": "denoise",
-    "seconds": 0,
-    "layout": "technical",
-    "travel": false,
-    "captureTime": 1,
-    "motion": "hold"
-  },
-  {
     "id": "to-light",
     "chapter": "light",
     "scene": "courtyard",
@@ -1249,6 +1135,157 @@ export const beats:Beat[] = [
       5,
       -5
     ]
+  },
+  {
+    "id": "image",
+    "chapter": "light",
+    "scene": "courtyard",
+    "camera": [
+      10,
+      42,
+      112
+    ],
+    "target": [
+      12,
+      4,
+      -5
+    ],
+    "rayFrom": 5,
+    "rayTo": 5,
+    "visual": "image",
+    "seconds": 0,
+    "layout": "scene",
+    "travel": false,
+    "captureTime": 1,
+    "via": [],
+    "motion": "hold",
+    "portraitCamera": [
+      10,
+      60,
+      230
+    ],
+    "portraitTarget": [
+      12,
+      5,
+      -5
+    ],
+    "title": "De la pixel la imagine",
+    "intro": "Schimbăm perspectiva: privim acum prin camera virtuală inițială. Cadrul rasterizat identifică imaginea și pixelul q; nu este rezultatul sample-ului didactic.",
+    "aimVia": []
+  },
+  {
+    "id": "samples",
+    "chapter": "samples",
+    "scene": "courtyard",
+    "camera": [
+      39,
+      12,
+      -19
+    ],
+    "target": [
+      -36,
+      4,
+      16
+    ],
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
+    "visual": "samples",
+    "seconds": 1.8,
+    "layout": "technical",
+    "travel": false,
+    "captureTime": 1,
+    "motion": "arrive",
+    "portraitCamera": [
+      32,
+      15,
+      -25
+    ],
+    "portraitTarget": [
+      -36,
+      4,
+      16
+    ]
+  },
+  {
+    "id": "loop",
+    "chapter": "loop",
+    "scene": "courtyard",
+    "camera": [
+      -24,
+      8,
+      -4
+    ],
+    "target": [
+      -12,
+      4,
+      -38
+    ],
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
+    "visual": "loop",
+    "seconds": 1.8,
+    "layout": "technical",
+    "travel": false,
+    "captureTime": 1,
+    "motion": "arrive"
+  },
+  {
+    "id": "noise",
+    "chapter": "noise",
+    "scene": "courtyard",
+    "camera": [
+      44,
+      7,
+      -14
+    ],
+    "target": [
+      61,
+      6,
+      -24
+    ],
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
+    "visual": "noise",
+    "seconds": 2.8,
+    "layout": "technical",
+    "travel": false,
+    "captureTime": 1,
+    "via": [
+      [
+        12,
+        12,
+        -10
+      ],
+      [
+        33,
+        8,
+        -10
+      ]
+    ],
+    "motion": "arrive"
+  },
+  {
+    "id": "denoise",
+    "chapter": "denoise",
+    "scene": "courtyard",
+    "camera": [
+      44,
+      7,
+      -14
+    ],
+    "target": [
+      61,
+      6,
+      -24
+    ],
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
+    "visual": "denoise",
+    "seconds": 0,
+    "layout": "technical",
+    "travel": false,
+    "captureTime": 1,
+    "motion": "hold"
   }
 ];
 

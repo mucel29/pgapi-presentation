@@ -59,7 +59,7 @@ test('long selected air legs reach their intended material without newly introdu
 });
 test('forward observer rails after glass do not cross physical canyon architecture',()=>{
  const court=createCourtyard(),ray=new T.Raycaster();
- for(const aspect of [16/9,9/16])for(const id of ['samples','cost','noise','to-light']){
+ for(const aspect of [16/9,9/16])for(const id of ['cost','to-light']){
   const i=beats.findIndex(b=>b.id===id),b=beats[i];let previous=new T.Vector3(...shotPose(b,beats[i-1],0,aspect).position);
   for(let k=1;k<=80;k++){
    const point=new T.Vector3(...shotPose(b,beats[i-1],k/80,aspect).position),direction=point.clone().sub(previous),distance=direction.length();
