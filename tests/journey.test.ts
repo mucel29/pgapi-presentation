@@ -23,7 +23,7 @@ test('triangle SAH closest hits match brute force and the production BVH library
  }assert.ok(hits>0,'queries exercise real hits on the relocated bridge');assert.ok(saved>10000);assert.ok(tree.candidates.length>0);
 });
 test('manifest contains 15 topics, four travel beats and an image pivot',()=>{
- assert.equal(chapters.length,15);assert.equal(beats.length,20);assert.equal(beats.filter(b=>b.travel).length,4);assert.equal(new Set(beats.map(b=>b.id)).size,20);
+ assert.equal(chapters.length,15);assert.equal(beats.length,21);assert.equal(beats.filter(b=>b.travel).length,4);assert.equal(new Set(beats.map(b=>b.id)).size,21);
  for(const c of chapters){assert.ok(beats.some(b=>b.id===c.id));assert.ok(c.points.length>=3);assert.ok(c.notes.length>50);assert.ok(c.sources.length);}
  for(const b of beats){assert.ok(chapters.some(c=>c.id===b.chapter));assert.ok(b.rayFrom<=b.rayTo);assert.ok(b.rayTo<=5);}
 });

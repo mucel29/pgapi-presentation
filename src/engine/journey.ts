@@ -35,6 +35,7 @@ export class Journey{
  }
  get beat(){return beats[this.index];}get isMoving(){return this.transition<1;}
  invalidateRaster(){this.drawKey='';}
+ setLessonSamples(count:number,depth:number){this.visuals.setLessonSamples(count,depth);this.invalidateRaster();}
  replayVisuals(){this.elapsed=0;this.visuals.apply(this.beat);this.invalidateRaster();}
  replayShot(){this.setBeat(this.index,false,true);}
  setSceneViewport(rect:{left:number;top:number;width:number;height:number}){this.sceneViewport={...rect};this.resize();}
@@ -56,7 +57,7 @@ export class Journey{
   this.transitionShot=!immediate&&!replay&&b.motion==='hold'&&this.camera.position.distanceTo(new T.Vector3(...destination.position))>1?{...b,motion:'arrive',seconds:2}:b;
   this.from.set(...this.transitionFrom.camera);this.fromTarget.set(...this.transitionFrom.target);
   if(b.scene==='portal'&&!replay)this.portalFrom=immediate?[...portalStart]:[...this.monitorPosition];
-  this.visuals.root.visible=!['image','samples','loop','noise','denoise'].includes(b.id);
+  this.visuals.root.visible=!['image','loop','noise','denoise'].includes(b.id);
   this.visuals.apply(b);if(immediate||this.transitionShot.seconds===0||matchMedia('(prefers-reduced-motion: reduce)').matches)this.finish();else this.updateTransition(0);
  }
  finish(){const b=this.beat;this.transition=1;this.elapsed=b.travel?b.seconds:0;this.updateTransition(1);this.visuals.update(this.elapsed,b.rayTo);this.visuals.fitHead(this.camera,this.canvas.height);this.invalidateRaster();}
@@ -104,7 +105,7 @@ export class Journey{
   }
   const b=this.beat;if(!this.paused){this.elapsed+=dt;if(this.transition<1){this.transition=Math.min(1,this.elapsed/Math.max(.01,this.transitionShot?.seconds??b.seconds));this.updateTransition(this.transition);
    }const state=shotState(b.motion??'arrive',this.transition,b.rayFrom,b.rayTo);this.visuals.update(this.elapsed,state.ray);this.visuals.fitHead(this.camera,this.canvas.height);}
-  const animated=!this.paused&&(b.scene==='room'||this.transition<1||this.visuals.isEmitting||b.visual==='diffuse'&&this.elapsed<4.5||b.visual==='bvh'&&this.elapsed<3.6||b.visual==='traversal'&&this.visuals.manualStep===null&&this.elapsed<this.visuals.traversal.events.length*.85);
+  const animated=!this.paused&&(b.scene==='room'||this.transition<1||this.visuals.isEmitting||this.visuals.traversalActive&&this.visuals.manualStep===null);
   const drawKey=[this.index,this.transition,this.visuals.selected.id,this.visuals.lastStep,this.visuals.revision,innerWidth,innerHeight].join('/');
   if(!animated&&drawKey===this.drawKey)return;this.drawKey=drawKey;
   if(b.scene==='room'||b.scene==='portal'&&this.transition<portalCut){this.renderPortal();if(!this.room.scene.children.some(o=>o instanceof T.DirectionalLight&&o.shadow.map))this.renderer.shadowMap.needsUpdate=true;this.renderer.render(this.room.scene,this.camera);

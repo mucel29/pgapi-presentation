@@ -156,3 +156,34 @@ body.exploring #image-frame{display:none}
  body.has-experiment:not(.experiment-expanded) #presentation{max-height:calc(100dvh - 108px);width:420px}
  #image-frame{inset:53px 10px 56px}
 }
+
+/* Presentation defaults: title, current state, and optional controls. */
+body:not(.experiment-expanded) #section,body:not(.exploring) #render-status{display:none}
+body:not(.experiment-expanded) #ray-status{display:none}
+body.has-path-lesson #presentation{width:min(360px,calc(100vw - 24px))}
+body.has-path-lesson:not(.experiment-expanded) #lesson-scroll{padding:12px 16px 8px}
+body.has-path-lesson h1{font-size:24px;margin:2px 0 8px}
+body.has-path-lesson #lesson-tools{padding:5px 16px 8px}
+body:not(.experiment-expanded) #lesson-tools .actions kbd{display:inline-block;margin:0 4px 0 0}
+#sample-budget .pixel-jitter{display:flex;align-items:center;gap:16px}
+#sample-budget .pixel-jitter svg{width:92px;height:92px;flex:none;margin:0}
+#sample-budget .pixel-jitter svg text{font:10px Mono}
+.pixel-jitter span{font:11px Mono;color:#bcd6cc}
+.pixel-jitter output{display:block;font:18px/1.7 Mono;color:var(--gold)}
+#sample-budget .lesson-depth{margin-top:8px;padding-top:7px}
+#contribution-panel .return-to-pixel{margin:4px 0;font:12px Mono;gap:12px}
+#contribution-panel .pixel-average{border:0;margin:0;padding:2px 0}
+body.cursor-idle #app,body.cursor-idle #app *{cursor:none!important}
+#code{width:min(1120px,94vw);max-height:90dvh}
+#code .dialog-heading{margin-bottom:12px}
+#code pre{max-height:65dvh;overflow:auto;white-space:pre;padding:22px;scrollbar-width:thin}
+#code-content{font:clamp(13px,1.5vw,19px)/1.65 Mono;white-space:pre}
+#code-source{font:11px/1.5 Mono;overflow-wrap:anywhere;margin-bottom:0}
+@media(max-width:759px){
+ body.has-path-lesson h1{font-size:21px}
+ body.has-path-lesson:not(.experiment-expanded) #presentation{width:min(350px,calc(100vw - 24px));max-height:42dvh}
+ #sample-budget .pixel-jitter svg{width:72px;height:72px}
+ #code{padding:18px}
+ #code pre{padding:14px;max-height:62dvh}
+ #code-content{font-size:13px}
+}

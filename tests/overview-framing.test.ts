@@ -39,19 +39,30 @@ test('essential guide labels are visible projected anchors rather than raster te
  }
 });
 
-test('diffuse alternatives precede the single selected continuation and replay resets them',()=>{
- const visuals=new JourneyVisuals(createCourtyard()),beat=beats.find(b=>b.id==='diffuse')!;
- visuals.apply(beat);assert.equal(visuals.diffusePhase,'normal');
- assert.equal(visuals.hemisphere.children.filter(o=>o.name.startsWith('Diffuse candidate')&&o.visible).length,0);
- visuals.update(2,beat.rayTo);assert.equal(visuals.diffusePhase,'candidates');
+test('diffuse selection requires the next beat and replay restores the same explicit phase',()=>{
+ const visuals=new JourneyVisuals(createCourtyard()),candidate=beats.find(b=>b.id==='diffuse')!,chosen=beats.find(b=>b.id==='diffuse-chosen')!;
+ assert.ok(chosen);assert.deepEqual(chosen.camera,candidate.camera);assert.equal(chosen.rayFrom,1);assert.equal(chosen.rayTo,1);
+ visuals.apply(candidate);visuals.update(20,candidate.rayTo);assert.equal(visuals.diffusePhase,'candidates');
  assert.equal(visuals.hemisphere.children.filter(o=>o.name.startsWith('Diffuse candidate tip')&&o.visible).length,7);
  assert.equal(visuals.guideAnchors.some(a=>a.text==='direcția aleasă'),false);
- visuals.update(4,beat.rayTo);assert.equal(visuals.diffusePhase,'selected');
+ visuals.apply(chosen);assert.equal(visuals.diffusePhase,'selected');
  assert.equal(visuals.guideAnchors.some(a=>a.text==='direcția aleasă'),true);
  const selected=visuals.hemisphere.getObjectByName('Diffuse candidate tip 6')!;
  const actual=new T.Vector3(...route[2]).sub(new T.Vector3(...route[1])).normalize(),shown=selected.position.clone().sub(new T.Vector3(...route[1])).normalize();
  assert.ok(actual.dot(shown)>1-1e-10);
- visuals.apply(beat);assert.equal(visuals.diffusePhase,'normal');assert.equal(visuals.guideAnchors.some(a=>a.text==='direcția aleasă'),false);
+ visuals.apply(candidate);assert.equal(visuals.diffusePhase,'candidates');
+ visuals.apply(chosen);assert.equal(visuals.diffusePhase,'selected');
+});
+test('BVH and traversal automatically descend actual boxes and triangle tests then repeat',()=>{
+ const visuals=new JourneyVisuals(createCourtyard());
+ for(const id of ['bvh','traversal']){
+  const beat=beats.find(b=>b.id===id)!;visuals.apply(beat);assert.equal(visuals.manualStep,null);assert.equal(visuals.currentHit?.triangle,-1);
+  visuals.update(1.8,beat.rayTo);assert.ok(visuals.lastStep>0);assert.ok(visuals.event.node.depth>0);
+  const leafStep=visuals.traversal.events.findIndex(e=>e.testedTriangle!==undefined);assert.ok(leafStep>0);
+  visuals.step(leafStep-visuals.lastStep);assert.equal(visuals.event.testedTriangle,visuals.event.node.indices[0]);
+  visuals.traversalPlayback(true);visuals.update(visuals.traversal.events.length*.85+1.7+.01,beat.rayTo);assert.equal(visuals.manualStep,null);
+  assert.ok(visuals.lastStep<visuals.traversal.events.length-1);
+ }
 });
 test('traversal never exposes a future hit and miss clears all hit vertices',()=>{
  const visuals=new JourneyVisuals(createCourtyard()),beat=beats.find(b=>b.id==='traversal')!;visuals.apply(beat);

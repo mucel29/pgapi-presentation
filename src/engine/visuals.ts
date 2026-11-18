@@ -4,15 +4,18 @@ import {LineSegmentsGeometry} from 'three/addons/lines/LineSegmentsGeometry.js';
 import {LineMaterial} from 'three/addons/lines/LineMaterial.js';
 import {emissionProgress,reflectionSamples,bvhInk} from '../core/visual-sequence.ts';
 import {surfaceRotation} from '../core/surface-frame.ts';
-import {cameraPixel} from '../core/sampling.ts';
+import {cameraPixel,illustratedSamples} from '../core/sampling.ts';
 import {Reflector} from 'three/addons/objects/Reflector.js';
-import {cosineHemisphere,normalize,sub,add,mul,rng,type Vec3} from '../core/math.ts';
-import {route,diffuseNormal,metalNormal,glassNormal,origin} from '../core/route.ts';
+import {cosineHemisphere,normalize,sub,add,mul,rng,reflect,type Vec3} from '../core/math.ts';
+import {route,diffuseNormal,metalNormal,glassNormal,origin,throughput} from '../core/route.ts';
 import {traceSAH,type Node} from '../core/bvh.ts';
+import {materialPalette} from '../core/transport.ts';
 import {slabIntervals} from '../core/experiments.ts';
 import type {Beat} from '../content/chapters.ts';
 import type {Courtyard} from './courtyard.ts';
 const GOLD=0xffdf98,IVORY=0xfff3cd,NORMAL=0xf3f5e7,CANDIDATE=0x74d9ec;
+const TRAVERSAL_SECONDS=.85,TRAVERSAL_HOLD=1.7;
+const sampleColors=[0xffd294,0xa4d5bf,0xc7b1e8,0xf0b0bc];
 function beam(color:number,r=.045,opacity=1){const o=new T.Mesh(new T.CylinderGeometry(r,r,1,6),new T.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,toneMapped:false}));o.renderOrder=12;return o;}
 function stretch(o:T.Mesh,a:Vec3,b:Vec3,f=1){const av=new T.Vector3(...a),bv=new T.Vector3(...b).sub(av).multiplyScalar(f),l=bv.length();o.visible=l>.001;o.scale.y=l;o.position.copy(av).addScaledVector(bv,.5);if(l>.001)o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),bv.normalize());}
 function marker(color:number,r=.14){return new T.Mesh(new T.IcosahedronGeometry(r,1),new T.MeshBasicMaterial({color,toneMapped:false,transparent:true,depthWrite:false}));}
@@ -29,6 +32,7 @@ function boundWire(bounds:{min:Vec3;max:Vec3},color:number){
 }
 export class JourneyVisuals{
  root=new T.Group();rasterOnly=new T.Group();path=new T.Group();hemisphere=new T.Group();normals=new T.Group();boxes=new T.Group();wire=new T.Group();materialRays=new T.Group();
+ sampleRays=new T.Group();private sampleCount=2;private sampleDepth=3;private samplePaths:{points:Vec3[];segments:T.Mesh[];head:T.Mesh;pixel:T.Mesh;started:number}[]=[];private playbackStarted=0;
  packet=marker(0xfff3cd,.2);private headHalo=marker(GOLD,.42);private tail=beam(0xffedbb,.13);private tailHalo=beam(GOLD,.26,.16);private contact=new T.Mesh(new T.TorusGeometry(.58,.045,6,32),new T.MeshBasicMaterial({color:GOLD,transparent:true,opacity:.7,depthWrite:false,toneMapped:false}));segments:T.Mesh[]=[];boxObjects=new Map<number,{group:T.Group;ink:LineMaterial;outline:LineMaterial}>();nodes:Node[]=[];selected:Node;lastStep=-1;manualStep:number|null=null;beat:Beat|null=null;progress=0;revision=0;
  testRayOrigin:Vec3=[0,0,0];testRayDirection:Vec3=[0,0,-1];rayCase='hit';private traceResult:ReturnType<typeof traceSAH>;private testBeam:T.Mesh;private hitMesh:T.Mesh;private hitOutline:LineSegments2;private hitCorners=[marker(0xffedf6,.1),marker(0xffedf6,.1),marker(0xffedf6,.1)];private hitLabel=textLabel('closest-hit','#ff96ce');private hitPoint=marker(0xff70b8,.13);private hitId=-2;private highlightKey='';
  private fans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private mirrorFans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private highlight:T.Mesh;private triangleInk:LineMaterial;private triangleOutline:LineMaterial;private selectedEdges:LineSegments2;private selectedInk:LineMaterial;private hitInk:LineMaterial;private elapsed=0;private userSelected=false;private splitPlane:T.Mesh;candidateIndex=0;
@@ -47,10 +51,10 @@ export class JourneyVisuals{
  }
  constructor(room:Courtyard){
   this.room=room;
-  this.testRayOrigin=[...room.rayOrigin];this.testRayDirection=[...room.rayDirection];this.traceResult=room.traversal;this.root.name='Illustrations — excluded from path tracing';room.scene.add(this.root);const mirror=new Reflector(new T.PlaneGeometry(9,10),{textureWidth:256,textureHeight:256,color:0xb4a68c,clipBias:.003,multisample:0});mirror.position.set(...route[2]).addScaledVector(new T.Vector3(...metalNormal),.025);mirror.quaternion.copy(surfaceRotation(metalNormal));const renderMirror=mirror.onBeforeRender.bind(mirror);mirror.onBeforeRender=(renderer,scene,camera,geometry,material,group)=>{const rv=room.reflector.visible,fv=room.reflectorFrame.visible,iv=this.root.visible;room.reflector.visible=false;room.reflectorFrame.visible=false;this.root.visible=false;try{renderMirror(renderer,scene,camera,geometry,material,group);}finally{room.reflector.visible=rv;room.reflectorFrame.visible=fv;this.root.visible=iv;}};mirror.name='Raster planar reflection — excluded from tracer';this.rasterOnly.name='Raster reflections';room.scene.add(this.rasterOnly);this.rasterOnly.add(mirror);
+  this.testRayOrigin=[...room.rayOrigin];this.testRayDirection=[...room.rayDirection];this.traceResult=room.traversal;this.root.name='Illustrations — excluded from path tracing';room.scene.add(this.root);const mirror=new Reflector(new T.PlaneGeometry(9,10),{textureWidth:256,textureHeight:256,color:materialPalette.metal,clipBias:.003,multisample:0});mirror.position.set(...route[2]).addScaledVector(new T.Vector3(...metalNormal),.025);mirror.quaternion.copy(surfaceRotation(metalNormal));const renderMirror=mirror.onBeforeRender.bind(mirror);mirror.onBeforeRender=(renderer,scene,camera,geometry,material,group)=>{const rv=room.reflector.visible,fv=room.reflectorFrame.visible,iv=this.root.visible;room.reflector.visible=false;room.reflectorFrame.visible=false;this.root.visible=false;try{renderMirror(renderer,scene,camera,geometry,material,group);}finally{room.reflector.visible=rv;room.reflectorFrame.visible=fv;this.root.visible=iv;}};mirror.name='Raster planar reflection — excluded from tracer';this.rasterOnly.name='Raster reflections';room.scene.add(this.rasterOnly);this.rasterOnly.add(mirror);
   (this.headHalo.material as T.MeshBasicMaterial).opacity=.15;this.headHalo.renderOrder=13;this.packet.renderOrder=15;this.contact.renderOrder=14;
   this.root.add(this.headHalo,this.tail,this.tailHalo,this.contact);
-  this.root.add(this.path,this.hemisphere,this.normals,this.boxes,this.wire,this.materialRays,this.packet,this.cameraRig,this.glassRig,this.selection,this.slabContacts,this.sahVolumes,this.reflectionProof,this.splitLabel);
+  this.root.add(this.sampleRays,this.path,this.hemisphere,this.normals,this.boxes,this.wire,this.materialRays,this.packet,this.cameraRig,this.glassRig,this.selection,this.slabContacts,this.sahVolumes,this.reflectionProof,this.splitLabel);
   const {center,right,up,footprint}=cameraPixel;
   // A flat image plane, never a 3D frustum. All cells and q share the sampler basis.
   const pixelGrid=new T.Group();this.cameraRig.add(pixelGrid);
@@ -63,6 +67,32 @@ export class JourneyVisuals{
   const body=new T.Mesh(new T.BoxGeometry(1.7,1.3,1.4),new T.MeshBasicMaterial({color:0x36525b,wireframe:true}));body.position.set(...add(origin,mul(cameraPixel.forward,-.85)));body.quaternion.copy(surfaceRotation(cameraPixel.forward));this.cameraRig.add(body);
   const q=marker(0xffdf70,.08);q.position.set(...center);this.cameraRig.add(q);
   const direction=beam(0xffdf70,.035);stretch(direction,origin,add(center,mul(cameraPixel.forward,2)));this.cameraRig.add(direction);
+  // The sample bundle is the same original world-space camera and cell.
+  // Primary hits are analytic; subsequent endpoints are real CPU mesh queries.
+  // This illustration never imports, prepares or starts the GPU path tracer.
+  const sampleRandom=rng(186),sampleQuery=new T.Raycaster();
+  for(const [index,sample] of illustratedSamples(4).entries()){
+   const points:Vec3[]=[[...sample.origin],sample.end],weights:Vec3[]=[[1,1,1]];
+   let point=sample.end,direction=sample.outgoing!,weight=[...throughput[1]] as Vec3;
+   for(let bounce=1;bounce<3;bounce++){
+    sampleQuery.set(new T.Vector3(...point).addScaledVector(new T.Vector3(...direction),.035),new T.Vector3(...direction));sampleQuery.far=180;
+    const hit=sampleQuery.intersectObject(room.world,true).find(h=>h.distance>.05);
+    const end=hit?hit.point.toArray() as Vec3:add(point,mul(direction,75));points.push(end);weights.push([...weight]);
+    if(!hit)break;
+    const normal=hit.face!.normal.clone().applyNormalMatrix(new T.Matrix3().getNormalMatrix(hit.object.matrixWorld));if(normal.dot(new T.Vector3(...direction))>0)normal.negate();
+    const object=hit.object as T.Mesh,material=(Array.isArray(object.material)?object.material[hit.face!.materialIndex]:object.material) as T.MeshStandardMaterial;
+    weight=weight.map((v,i)=>v*(material.color?.toArray()[i]??1)) as Vec3;
+    direction=object===room.reflector?reflect(direction,normal.toArray()):cosineHemisphere(sampleRandom(),sampleRandom(),normal.toArray());point=end;
+    // Transmission is already taught by the selected optical path. Stop this
+    // illustrative sample at glass rather than inventing an opaque scatter.
+    if(object===room.pane||object===room.lamp)break;
+   }
+   const group=new T.Group();group.name=`Original-camera sample ${index}`;
+   const segments=weights.map((weight,i)=>{const mesh=beam(0xffffff,.04,.8);mesh.name=`Sample ${index} segment ${i}`;(mesh.material as T.MeshBasicMaterial).color.setRGB(...weight);group.add(mesh);return mesh;});
+   const head=marker(0xffffff,.14);head.name=`Sample head ${index}`;head.renderOrder=15;group.add(head);
+   const pixel=marker(sampleColors[index],.065);pixel.position.set(...sample.pixel);group.add(pixel);this.sampleRays.add(group);
+   this.samplePaths.push({points,segments,head,pixel,started:index*.28});
+  }
   this.slabContacts.add(this.slabNear,this.slabFar);
   const nearLabel=textLabel('tNear','#8cdbb4',1.2),farLabel=textLabel('tFar','#ffc576',1.2);nearLabel.position.y=1.5;farLabel.position.y=-1.5;this.slabNear.add(nearLabel);this.slabFar.add(farLabel);
   this.mirrorSelected=beam(0xffdf70,.06,.95);stretch(this.mirrorSelected,route[2],add(route[2],mul(normalize(sub(route[3],route[2])),8)));this.selection.add(this.mirrorSelected);
@@ -90,14 +120,14 @@ export class JourneyVisuals{
   const random=rng(529),directions=Array.from({length:6},()=>cosineHemisphere(random(),random(),diffuseNormal));
   directions.push(normalize(sub(route[2],route[1])));
   for(const [index,d] of directions.entries()){
-   const end=add(route[1],mul(d,7.5)),mesh=beam(CANDIDATE,.055,.72),tip=arrowTip(CANDIDATE);
+   const end=add(route[1],mul(d,10.5)),mesh=beam(CANDIDATE,.055,.72),tip=arrowTip(CANDIDATE);
    mesh.name=`Diffuse candidate ${index}`;tip.name=`Diffuse candidate tip ${index}`;
    this.fans.push({mesh,a:route[1],b:end,tip});this.hemisphere.add(mesh,tip);
   }
   this.selectedDirection.position.set(...add(this.fans[6].b,[0,1.1,0]));this.hemisphere.add(this.selectedDirection);
-  const dome=new T.Mesh(new T.SphereGeometry(7.5,16,8,0,Math.PI*2,0,Math.PI/2),new T.MeshBasicMaterial({color:NORMAL,wireframe:true,transparent:true,opacity:.12,depthWrite:false}));dome.position.set(...route[1]);dome.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(...diffuseNormal));this.hemisphere.add(dome);
+  const dome=new T.Mesh(new T.SphereGeometry(10.5,16,8,0,Math.PI*2,0,Math.PI/2),new T.MeshBasicMaterial({color:NORMAL,wireframe:true,transparent:true,opacity:.12,depthWrite:false}));dome.position.set(...route[1]);dome.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(...diffuseNormal));this.hemisphere.add(dome);
   for(const [index,out] of reflectionSamples(normalize(sub(route[2],route[1])),metalNormal,5).entries()){
-   const end=add(route[2],mul(out,6+index%2)),fan=beam(GOLD,.024,.24),tip=arrowTip(GOLD);this.mirrorFans.push({mesh:fan,a:route[2],b:end,tip});this.materialRays.add(fan,tip);
+   const end=add(route[2],mul(out,6+index%2)),fan=beam(GOLD,.024,.24),tip=arrowTip(GOLD);for(const mesh of [fan,tip])(mesh.material as T.MeshBasicMaterial).color.setRGB(...throughput[2]);this.mirrorFans.push({mesh:fan,a:route[2],b:end,tip});this.materialRays.add(fan,tip);
   }
   const collect=(n:Node)=>{
    this.nodes.push(n);const corners=Array.from({length:8},(_,i)=>new T.Vector3(i&1?n.max[0]:n.min[0],i&2?n.max[1]:n.min[1],i&4?n.max[2]:n.min[2]));const positions:number[]=[];
@@ -121,9 +151,11 @@ export class JourneyVisuals{
   const test=beam(0xffdf98,.05);this.testBeam=test;stretch(test,room.rayOrigin,add(room.rayOrigin,mul(room.rayDirection,36)));this.wire.add(test,this.queryLabel);
  }
  setResolution(width:number,height:number){for(const ink of [this.triangleInk,this.triangleOutline,this.selectedInk,this.hitInk])ink.resolution.set(width,height);for(const box of this.boxObjects.values()){box.ink.resolution.set(width,height);box.outline.resolution.set(width,height);box.ink.linewidth=1;box.outline.linewidth=2.4;}}
- get diffusePhase(){return this.elapsed<.5?'normal':this.elapsed<3.2?'candidates':'selected';}
+ get diffusePhase(){return this.beat?.id==='diffuse-chosen'?'selected':'candidates';}
+ get traversalActive(){return ['bvh','traversal'].includes(this.beat?.visual??'');}
  get isEmitting(){
-  if(this.beat?.visual==='diffuse')return this.elapsed<4.5;
+  if(this.beat?.visual==='diffuse')return this.diffusePhase==='candidates'&&this.elapsed<1.6;
+  if(this.beat?.visual==='samples')return this.samplePaths.some((sample,i)=>i<this.sampleCount&&this.elapsed<sample.started+Math.min(this.sampleDepth,sample.segments.length)*.85);
   if(this.beat?.visual==='materials'&&!this.beat.travel)return this.mirrorFans.some((_,i)=>emissionProgress(this.elapsed,i)<1);
   return false;
  }
@@ -131,14 +163,14 @@ export class JourneyVisuals{
   const pixelScale=(position:T.Vector3,radius:number,pixels:number)=>Math.max(.6,2*Math.tan(T.MathUtils.degToRad(camera.fov)/2)*camera.position.distanceTo(position)/Math.max(1,height)*pixels/radius);
   const scale=pixelScale(this.packet.position,.2,2.6);this.packet.scale.setScalar(scale);this.headHalo.scale.setScalar(scale);
   this.hitCorners.forEach(corner=>corner.scale.setScalar(pixelScale(corner.position,.1,2.2)));
-  for(const fan of this.fans){const selected=this.diffusePhase==='selected'&&fan===this.fans[6],size=pixelScale(fan.mesh.position,.055,selected?1.4:1);fan.mesh.scale.x=fan.mesh.scale.z=size;fan.tip.scale.setScalar(pixelScale(fan.tip.position,.18,selected?3.5:2.6));}
-
+  for(const fan of this.fans){const selected=this.diffusePhase==='selected'&&fan===this.fans[6],size=pixelScale(fan.mesh.position,.055,selected?2:1.3);fan.mesh.scale.x=fan.mesh.scale.z=size;fan.tip.scale.setScalar(pixelScale(fan.tip.position,.18,selected?4.5:3.3));}
+  for(const sample of this.samplePaths){sample.head.scale.setScalar(pixelScale(sample.head.position,.14,2.6));for(const mesh of sample.segments){const width=pixelScale(mesh.position,.04,1.4);mesh.scale.x=mesh.scale.z=width;}}
  }
  get splitCandidates(){const candidates=[...this.tree.candidates].sort((a,b)=>a.cost-b.cost);return [candidates[0],candidates[Math.floor(candidates.length/3)],candidates[Math.floor(candidates.length*2/3)]];}
  setSplitCandidate(index:number){this.candidateIndex=Math.max(0,Math.min(2,index));this.revision++;this.updateBoxes();}
  get tree(){return this.room.tree;}get traversal(){return this.traceResult;}
- apply(beat:Beat){this.revision++;this.candidateIndex=0;this.beat=beat;this.elapsed=0;this.lastStep=-1;this.manualStep=null;this.selected=this.tree;this.userSelected=false;this.progress=beat.rayFrom;this.setCase('hit');this.update(0,beat.rayFrom);}
- select(id:number){this.revision++;this.userSelected=true;const step=this.traversal.events.findIndex(e=>e.node.id===id);if(this.beat?.visual==='traversal'&&step>=0){this.manualStep=step;this.lastStep=step;}this.selected=this.nodes.find(n=>n.id===id)??this.tree;this.updateBoxes();}
+ apply(beat:Beat){this.revision++;this.candidateIndex=0;this.beat=beat;this.elapsed=0;this.lastStep=-1;this.manualStep=null;this.selected=this.tree;this.userSelected=false;this.progress=beat.rayFrom;this.setCase('hit');this.manualStep=null;this.playbackStarted=0;this.samplePaths.forEach((sample,i)=>sample.started=i*.28);this.update(0,beat.rayFrom);}
+ select(id:number){this.revision++;this.userSelected=true;const step=this.traversal.events.findIndex(e=>e.node.id===id);if(this.traversalActive&&step>=0){this.manualStep=step;this.lastStep=step;}this.selected=this.nodes.find(n=>n.id===id)??this.tree;this.updateBoxes();}
  step(delta:number){this.userSelected=false;this.manualStep=Math.max(0,Math.min(this.traversal.events.length-1,(this.manualStep??Math.max(0,this.lastStep))+delta));this.update(this.elapsed,this.progress);}
  setCase(kind:string){
   const o=this.room.rayOrigin;
@@ -147,23 +179,23 @@ export class JourneyVisuals{
   else this.setRay(o,this.room.rayDirection,'hit');
  }
  setRay(o:Vec3,d:Vec3,label='custom'){
-  this.testRayOrigin=[...o];this.testRayDirection=normalize(d);this.rayCase=label;this.traceResult=traceSAH(this.tree,this.room.triangles,this.testRayOrigin,this.testRayDirection);this.manualStep=0;this.lastStep=0;this.userSelected=false;this.selected=this.tree;this.revision++;
+  this.testRayOrigin=[...o];this.testRayDirection=normalize(d);this.rayCase=label;this.traceResult=traceSAH(this.tree,this.room.triangles,this.testRayOrigin,this.testRayDirection);this.manualStep=null;this.lastStep=0;this.playbackStarted=this.elapsed;this.userSelected=false;this.selected=this.tree;this.revision++;
   stretch(this.testBeam,this.testRayOrigin,add(this.testRayOrigin,mul(this.testRayDirection,Math.min(100,this.traceResult.closest+8)||36)));
   this.queryLabel.position.set(...add(this.testRayOrigin,[0,2,0]));
   this.updateBoxes();
  }
- traversalPlayback(play:boolean){this.userSelected=false;this.manualStep=play?null:Math.max(0,this.lastStep);this.revision++;}
- get currentHit(){return this.beat?.visual==='traversal'?this.event:this.traceResult;}
+ traversalPlayback(play:boolean){this.userSelected=false;this.playbackStarted=this.elapsed-Math.max(0,this.lastStep)*TRAVERSAL_SECONDS;this.manualStep=play?null:Math.max(0,this.lastStep);this.revision++;}
+ get currentHit(){return this.traversalActive?this.event:this.traceResult;}
  get event(){return this.traversal.events[Math.max(0,this.lastStep)];}
- get displayRoot(){if(this.userSelected)return this.selected.depth>0?this.selected:this.tree;const active=this.beat?.visual==='traversal'?this.event?.node:this.selected;if(!active||active.depth<2)return this.tree;const depth=Math.max(0,active.depth-2);return this.nodes.find(n=>n.depth===depth&&active.indices.every(i=>n.indices.includes(i)))??this.tree;}
- get bvhStage(){return this.beat?.visual==='bvh'&&!this.userSelected?(this.elapsed<1.6?0:1):2;}
+ get displayRoot(){if(this.userSelected)return this.selected.depth>0?this.selected:this.tree;const active=this.traversalActive?this.event?.node:this.selected;if(!active||active.depth<2)return this.tree;const depth=Math.max(0,active.depth-2);return this.nodes.find(n=>n.depth===depth&&active.indices.every(i=>n.indices.includes(i)))??this.tree;}
+ get bvhStage(){return 2;}
  visibleNodes(){const root=this.displayRoot;return this.nodes.filter(n=>n.depth>=root.depth&&n.depth<=root.depth+this.bvhStage&&n.indices.every(i=>root.indices.includes(i)));}
  private updateBoxes(){
-  const c=this.beat?.visual??'',event=this.event;const active=c==='traversal'?event?.node:this.selected;
+  const c=this.beat?.visual??'',event=this.event;const active=this.traversalActive?event?.node:this.selected;
   for(const node of this.nodes){
-   const box=this.boxObjects.get(node.id)!,child=active?.children?.includes(node),recent=c==='traversal'?this.traversal.events.slice(Math.max(0,this.lastStep-3),this.lastStep+1).find(e=>e.node.id===node.id):undefined,rejected=recent?.status==='miss'||recent?.status==='pruned';
-   box.group.visible=this.boxes.visible&&(c==='aabb'?node===this.tree:c==='sah'?node===this.tree:c==='bvh'&&!this.userSelected?(this.elapsed<1.6?node===this.tree:Boolean(this.tree.children?.includes(node))):Boolean(node===active||child||rejected));
-   const isActive=node===active,isRejected=isActive&&(event?.status==='miss'||event?.status==='pruned')||rejected;box.ink.color.set(isRejected?bvhInk.rejected:isActive?bvhInk.active:child?bvhInk.child:bvhInk.ancestor);box.ink.transparent=true;box.ink.opacity=isRejected?.22:isActive?1:child?.45:.2;box.outline.transparent=true;box.outline.opacity=isActive?.85:.35;box.ink.linewidth=isActive?1.2:.75;box.outline.linewidth=isActive?2.6:1.7;box.ink.dashed=Boolean(isRejected);box.ink.dashSize=.35;box.ink.gapSize=.18;
+   const box=this.boxObjects.get(node.id)!,child=active?.children?.includes(node),recent=this.traversalActive?this.traversal.events.slice(Math.max(0,this.lastStep-3),this.lastStep+1).find(e=>e.node.id===node.id):undefined,rejected=recent?.status==='miss'||recent?.status==='pruned';
+   box.group.visible=this.boxes.visible&&(c==='aabb'?node===this.tree:c==='sah'?node===this.tree:Boolean(node===active||child||rejected));
+   const isActive=node===active,isRejected=isActive&&(event?.status==='miss'||event?.status==='pruned')||rejected;box.ink.color.set(isRejected?bvhInk.rejected:isActive?bvhInk.active:child?bvhInk.child:bvhInk.ancestor);box.ink.transparent=true;box.ink.opacity=isRejected?.22:isActive?1:child?.45:.2;box.outline.transparent=true;box.outline.opacity=isActive?.85:.35;box.ink.linewidth=isActive?2.2:1.2;box.outline.linewidth=isActive?4.2:2.5;box.ink.dashed=Boolean(isRejected);box.ink.dashSize=.35;box.ink.gapSize=.18;
   }
 
   const split=this.splitCandidates[this.candidateIndex];
@@ -176,7 +208,7 @@ export class JourneyVisuals{
   }
   this.splitLabel.visible=c==='sah';if(c==='sah'&&split){this.splitLabel.userData.guide.text=`plan ${'XYZ'[split.axis]}`;this.splitLabel.position.copy(this.splitPlane.position);}
   if(c==='sah'&&split){const size=new T.Vector3(...this.tree.max).sub(new T.Vector3(...this.tree.min));this.splitPlane.position.set(...this.tree.min).addScaledVector(size,.5);this.splitPlane.position.setComponent(split.axis,split.plane);this.splitPlane.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().setComponent(split.axis,1));this.splitPlane.scale.set(split.axis===0?size.z:size.x,split.axis===1?size.z:size.y,1);this.splitLabel.position.copy(this.splitPlane.position);}
-  const indices=c==='sah'&&split?this.tree.indices.filter(i=>{const tri=this.room.triangles[i],values=tri.map(p=>p[split.axis]);return (Math.min(...values)+Math.max(...values))/2<split.plane;}):c==='traversal'&&event?.status==='leaf'?event.node.indices:active?.indices??[];this.highlight.visible=this.boxes.visible&&indices.length>0;
+  const indices=c==='sah'&&split?this.tree.indices.filter(i=>{const tri=this.room.triangles[i],values=tri.map(p=>p[split.axis]);return (Math.min(...values)+Math.max(...values))/2<split.plane;}):this.traversalActive&&event?.status==='leaf'?(event.testedTriangle===undefined?event.node.indices:[event.testedTriangle]):active?.indices??[];this.highlight.visible=this.boxes.visible&&indices.length>0;
   this.selectedEdges.visible=this.highlight.visible;
   const key=indices.join(',');if(key!==this.highlightKey){
    this.highlightKey=key;const positions=indices.flatMap(i=>this.room.triangles[i].flat());this.highlight.geometry.dispose();this.highlight.geometry=new T.BufferGeometry();this.highlight.geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));
@@ -193,17 +225,33 @@ export class JourneyVisuals{
 
 
  }
+ setLessonSamples(count:number,depth:number){
+  const next=Math.max(0,Math.min(this.samplePaths.length,Math.floor(count))),nextDepth=depth<=1?1:3;
+  if(next!==this.sampleCount||nextDepth!==this.sampleDepth){
+   this.samplePaths.forEach((sample,i)=>{if(i>=this.sampleCount&&i<next)sample.started=this.elapsed;});
+   this.sampleCount=next;this.sampleDepth=nextDepth;this.revision++;this.updateSampleRays();
+  }
+ }
+ private updateSampleRays(){
+  for(const [index,sample] of this.samplePaths.entries()){
+   const active=index<this.sampleCount,limit=Math.min(this.sampleDepth,sample.segments.length),time=Math.max(0,this.elapsed-sample.started),progress=Math.min(limit,time/.85);
+   sample.head.parent!.visible=active;sample.pixel.visible=active;
+   for(const [i,mesh] of sample.segments.entries()){stretch(mesh,sample.points[i],sample.points[i+1],Math.max(0,Math.min(1,progress-i)));mesh.visible=active&&i<limit&&progress>i;}
+   const leg=Math.min(limit-1,Math.floor(progress)),fraction=Math.min(1,progress-leg);
+   sample.head.visible=active;sample.head.position.lerpVectors(new T.Vector3(...sample.points[leg]),new T.Vector3(...sample.points[leg+1]),fraction);
+   const material=sample.segments[leg].material as T.MeshBasicMaterial;(sample.head.material as T.MeshBasicMaterial).color.copy(material.color);
+  }
+ }
  update(elapsed:number,progress:number){
   this.elapsed=elapsed;this.progress=progress;const c=this.beat?.visual??'';const bvh=['cost','bvh','sah','aabb','traversal'].includes(c);
-  // The physical path always remains in world coordinates. Algorithmic
-  // sampling and loop state are explained only by the screen-space lesson.
+  // Selected and sampled paths keep their real world coordinates and scale.
   this.path.visible=c!=='room';
   this.packet.visible=!bvh&&!['room','samples','loop'].includes(c);
   this.segments.forEach((segment,i)=>{
    stretch(segment,route[i],route[i+1],Math.max(0,Math.min(1,progress-i)));
-   (segment.material as T.MeshBasicMaterial).opacity=bvh?.18:.4;
+   const material=segment.material as T.MeshBasicMaterial;material.color.setRGB(...throughput[Math.min(i,throughput.length-1)]);material.opacity=bvh?.18:c==='samples'?.18:.72;
   });
-  this.cameraRig.visible=c==='ray';
+  this.cameraRig.visible=c==='ray'||c==='samples';this.sampleRays.visible=c==='samples';this.updateSampleRays();
   this.glassRig.visible=this.beat?.motion==='glass';
   this.selection.visible=c==='materials';
   this.mirrorSelected.visible=c==='materials'&&!this.beat?.travel;
@@ -221,20 +269,21 @@ export class JourneyVisuals{
    if(interval.hit){this.slabNear.position.set(...add(this.testRayOrigin,mul(this.testRayDirection,interval.near)));this.slabFar.position.set(...add(this.testRayOrigin,mul(this.testRayDirection,interval.far)));}
   }
   const leg=Math.min(route.length-2,Math.max(0,Math.ceil(progress)-1)),f=Math.min(1,progress-leg);this.packet.position.lerpVectors(new T.Vector3(...route[leg]),new T.Vector3(...route[leg+1]),f);
-  // Direction is geometric. RGB attenuation is shown numerically in β;
-  // it never turns the line green or normalizes away the attenuation.
-  for(const mesh of [this.packet,this.headHalo,this.tail,this.tailHalo,this.contact])(mesh.material as T.MeshBasicMaterial).color.set(IVORY);
+  // Linear RGB is the actual accumulated material weight. No hue normalization:
+  // the diffuse surface changes hue, and the neutral mirror only reduces energy.
+  const weight=throughput[Math.min(throughput.length-1,Math.max(0,Math.floor(progress)))];
+  for(const mesh of [this.packet,this.headHalo,this.tail,this.tailHalo,this.contact])(mesh.material as T.MeshBasicMaterial).color.setRGB(...weight);
   this.headHalo.visible=this.tail.visible=this.tailHalo.visible=this.packet.visible;this.headHalo.position.copy(this.packet.position);
   const legStart=new T.Vector3(...route[leg]),legEnd=new T.Vector3(...route[leg+1]),direction=legEnd.clone().sub(legStart).normalize(),tailLength=Math.min(4.5,legStart.distanceTo(this.packet.position));const tailStart=this.packet.position.clone().addScaledVector(direction,-tailLength).toArray() as Vec3;stretch(this.tail,tailStart,this.packet.position.toArray() as Vec3);stretch(this.tailHalo,tailStart,this.packet.position.toArray() as Vec3);this.tail.visible=this.tailHalo.visible=this.packet.visible&&tailLength>.02;
   const contactIndex=Math.min(5,Math.round(progress)),contactPoint=route[contactIndex],normal=contactIndex===1?diffuseNormal:contactIndex===2?metalNormal:glassNormal;this.contact.visible=this.packet.visible&&contactIndex>0&&Math.abs(progress-contactIndex)<.025;this.contact.position.set(...contactPoint).addScaledVector(new T.Vector3(...normal),.035);this.contact.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(...normal));
   this.fans.forEach((fan,i)=>{
-   const fraction=emissionProgress(Math.max(0,elapsed-.5),i,.1,.85),selected=this.diffusePhase==='selected'&&i===6,opacity=this.diffusePhase==='selected'?(selected?1:.2):.75;
+   const fraction=this.diffusePhase==='selected'?1:emissionProgress(elapsed,i,.08,.7),selected=this.diffusePhase==='selected'&&i===6,opacity=this.diffusePhase==='selected'?(selected?1:.14):.85;
    reveal(fan,fraction);fan.mesh.visible=c==='diffuse'&&fraction>0;fan.tip.visible=c==='diffuse'&&fraction>.08;
-   for(const mesh of [fan.mesh,fan.tip]){const material=mesh.material as T.MeshBasicMaterial;material.opacity=opacity;material.color.set(selected?GOLD:CANDIDATE);}
+   for(const mesh of [fan.mesh,fan.tip]){const material=mesh.material as T.MeshBasicMaterial;material.opacity=opacity;if(selected)material.color.setRGB(...throughput[1]);else material.color.set(CANDIDATE);}
   });
   this.selectedDirection.visible=c==='diffuse'&&this.diffusePhase==='selected';
   this.mirrorFans.forEach((v,i)=>{reveal(v,emissionProgress(elapsed,i,.3,1.8));v.tip!.scale.setScalar(.45);(v.tip!.material as T.MeshBasicMaterial).opacity=.3;});
-  if(c==='traversal'){this.lastStep=this.manualStep??Math.min(this.traversal.events.length-1,Math.floor(elapsed/.85));if(this.lastStep===this.traversal.events.length-1)this.manualStep=this.lastStep;}
+  if(this.traversalActive){const duration=this.traversal.events.length*TRAVERSAL_SECONDS+TRAVERSAL_HOLD,local=((elapsed-this.playbackStarted)%duration+duration)%duration;this.lastStep=this.manualStep??Math.min(this.traversal.events.length-1,Math.floor(local/TRAVERSAL_SECONDS));}
   if(bvh)this.updateBoxes();else{this.hitMesh.visible=this.hitOutline.visible=this.hitPoint.visible=this.hitLabel.visible=false;this.hitCorners.forEach(corner=>corner.visible=false);this.highlight.visible=this.selectedEdges.visible=false;}
  }
 }

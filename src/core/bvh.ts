@@ -2,7 +2,7 @@ import {intersectAABB,intersectTriangle,sub,cross,dot,type Vec3,type Bounds} fro
 export type Triangle=[Vec3,Vec3,Vec3];
 export interface Candidate{axis:number;plane:number;cost:number;left:number;right:number;leftArea:number;rightArea:number;parentArea:number;leftBounds:Bounds;rightBounds:Bounds;}
 export interface Node extends Bounds{id:number;depth:number;indices:number[];children?:[Node,Node];candidates:Candidate[];split?:Candidate;}
-export interface TraceEvent{node:Node;status:'hit'|'miss'|'pruned'|'leaf';boxTests:number;triangleTests:number;closest:number;triangle:number;stack:number[];}
+export interface TraceEvent{node:Node;status:'hit'|'miss'|'pruned'|'leaf';boxTests:number;triangleTests:number;closest:number;triangle:number;stack:number[];testedTriangle?:number;triangleDistance?:number|null;}
 export function triangleBounds(t:Triangle):Bounds{return {min:[0,1,2].map(a=>Math.min(...t.map(p=>p[a]))) as Vec3,max:[0,1,2].map(a=>Math.max(...t.map(p=>p[a]))) as Vec3};}
 function union(bounds:Bounds[],indices:number[]):Bounds{return {min:[0,1,2].map(a=>Math.min(...indices.map(i=>bounds[i].min[a]))) as Vec3,max:[0,1,2].map(a=>Math.max(...indices.map(i=>bounds[i].max[a]))) as Vec3};}
 export function area(b:Bounds){const e=sub(b.max,b.min);return 2*(e[0]*e[1]+e[1]*e[2]+e[0]*e[2]);}
@@ -32,8 +32,12 @@ export function traceSAH(root:Node,triangles:Triangle[],o:Vec3,d:Vec3){
   while(stack.length){
     const {node,near}=stack.pop()!;let status:TraceEvent['status']=near===null?'miss':near>closest?'pruned':node.children?'hit':'leaf';
     if(status==='hit'&&node.children){const children=node.children.map(child=>{boxTests++;return {node:child,near:intersectAABB(o,d,child.min,child.max)};});children.sort((a,b)=>(b.near??Infinity)-(a.near??Infinity));stack.push(...children);}
-    if(status==='leaf')for(const i of node.indices){triangleTests++;const t=intersectTriangle(o,d,...triangles[i]);if(t!==null&&t<closest){closest=t;triangle=i;}}
-    events.push({node,status,boxTests,triangleTests,closest,triangle,stack:stack.map(e=>e.node.id)});
+    if(status==='leaf'){
+      for(const i of node.indices){
+        triangleTests++;const t=intersectTriangle(o,d,...triangles[i]);if(t!==null&&t<closest){closest=t;triangle=i;}
+        events.push({node,status,boxTests,triangleTests,closest,triangle,stack:stack.map(e=>e.node.id),testedTriangle:i,triangleDistance:t});
+      }
+    }else events.push({node,status,boxTests,triangleTests,closest,triangle,stack:stack.map(e=>e.node.id)});
   }return {events,closest,triangle,boxTests,triangleTests};
 }
 export function triangleNormal(t:Triangle):Vec3{const n=cross(sub(t[1],t[0]),sub(t[2],t[0])),l=Math.sqrt(dot(n,n));return n.map(v=>v/l) as Vec3;}

@@ -1,6 +1,6 @@
 import type {Vec3} from './math.ts';
 export const polishedRoughness=.055;
-export const materialPalette={diffuse:'#43bdd9',metal:'#f4b14b'};
+export const materialPalette={diffuse:'#43bdd9',metal:'#d5d5d5'};
 export function linearRGB(hex:string):Vec3{
  return [1,3,5].map(i=>{const s=parseInt(hex.slice(i,i+2),16)/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;}) as Vec3;
 }

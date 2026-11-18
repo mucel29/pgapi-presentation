@@ -57,18 +57,16 @@ test('canyon bridge and mirror remain visible in full-scene desktop and phone vi
  }
 });
 
-test('samples keep all actual architecture, visibility and materials unchanged through revisit and replay',()=>{
- const court=createCourtyard(),visuals=new JourneyVisuals(court),original=court.sphere.material;
- const meshes:T.Mesh[]=[];court.world.traverse(o=>{if(o instanceof T.Mesh)meshes.push(o);});
- meshes[0].visible=false;const visibility=meshes.map(o=>o.visible);visuals.rasterOnly.visible=false;
+test('sample launches use the unchanged original pinhole and analytic receiver across replay',()=>{
+ const court=createCourtyard(),visuals=new JourneyVisuals(court),sphereMaterial=court.sphere.material,geometry=court.teaching.geometry;
+ const beat=beats.find(b=>b.id==='samples')!;
  for(let visit=0;visit<2;visit++){
-  visuals.apply(beats.find(b=>b.id==='samples')!);visuals.update(1,4.18);
-  assert.deepEqual(meshes.map(o=>o.visible),visibility);
-  assert.ok(court.sphere.material===original);assert.equal(visuals.rasterOnly.visible,false);
-  visuals.apply(beats.find(b=>b.id==='samples')!);
-  assert.deepEqual(meshes.map(o=>o.visible),visibility);
-  visuals.apply(beats.find(b=>b.id==='loop')!);
-  assert.ok(court.sphere.material===original);assert.deepEqual(meshes.map(o=>o.visible),visibility);
+  visuals.apply(beat);visuals.setLessonSamples(1,3);visuals.update(0,beat.rayTo);
+  assert.equal(visuals.cameraRig.visible,true);assert.equal(visuals.sampleRays.visible,true);
+  const head=visuals.sampleRays.getObjectByName('Sample head 0')!;assert.ok(head.position.distanceTo(new T.Vector3(...origin))<1e-8);
+  visuals.update(2,beat.rayTo);assert.ok(head.position.distanceTo(new T.Vector3(...origin))>20);
+  assert.equal(court.sphere.material,sphereMaterial);assert.equal(court.teaching.geometry,geometry);
+  visuals.setLessonSamples(0,3);assert.equal(visuals.sampleRays.children.filter(o=>o.visible).length,0);
  }
 });
 
@@ -82,7 +80,10 @@ test('ray weights use the actual material linear RGB and display hue without inc
  }
  assert.deepEqual(weightDisplay(throughput[0]).hue,[1,1,1]);
  assert.ok(throughput[1][2]>throughput[1][1]&&throughput[1][1]>throughput[1][0]);
- assert.ok(throughput[2][1]>throughput[2][0]&&throughput[2][1]>throughput[2][2]);
+ assert.ok(Math.abs(throughput[2][0]/throughput[1][0]-throughput[2][2]/throughput[1][2])<1e-12,'neutral mirror preserves the diffuse hue');
+ const visuals=new JourneyVisuals(court);visuals.apply(beats.find(b=>b.id==='to-metal')!);visuals.update(1,1.5);
+ assert.deepEqual((visuals.packet.material as T.MeshBasicMaterial).color.toArray(),throughput[1]);
+ assert.deepEqual((visuals.segments[1].material as T.MeshBasicMaterial).color.toArray(),throughput[1]);
  assert.ok(weightDisplay(throughput[2]).magnitude<weightDisplay(throughput[1]).magnitude);
 });
 

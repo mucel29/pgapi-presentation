@@ -808,6 +808,29 @@ export const beats:Beat[] = [
     "motion": "arrive"
   },
   {
+    "id": "diffuse-chosen",
+    "chapter": "diffuse",
+    "scene": "courtyard",
+    "camera": [
+      -40,
+      5.7,
+      6
+    ],
+    "target": [
+      -30,
+      4,
+      -1
+    ],
+    "rayFrom": 1,
+    "rayTo": 1,
+    "visual": "diffuse",
+    "seconds": 1.6,
+    "layout": "scene",
+    "travel": false,
+    "captureTime": 0,
+    "motion": "arrive"
+  },
+  {
     "id": "to-metal",
     "chapter": "materials",
     "scene": "courtyard",

@@ -28,6 +28,7 @@ const shots:Record<string,Partial<Beat>>={
  ray:{...originView,seconds:3.2},
  hit:{...diffuseView,seconds:5.2},
  diffuse:{...diffuseView,seconds:0,motion:'hold'},
+ 'diffuse-chosen':{...diffuseView,seconds:0,motion:'hold'},
  'to-metal':{...mirrorView,seconds:6.6},
  materials:{...mirrorView,seconds:0,motion:'hold'},
  'to-glass':{...glassView,seconds:7.8},
@@ -35,7 +36,7 @@ const shots:Record<string,Partial<Beat>>={
  bvh:{...bridgeView},sah:{...bridgeView},aabb:{...bridgeView},traversal:{...bridgeView},
  'to-light':{...beaconView,seconds:5,rayFrom:4.45,rayTo:5,via:[],aimVia:[]},
  light:{...beaconView,seconds:0,motion:'hold',via:[],aimVia:[]},
- image:{...imageHold},samples:{...imageHold},loop:{...imageHold},noise:{...imageHold},denoise:{...imageHold},
+ image:{...imageHold},samples:{...originView,seconds:0,motion:'hold',via:[],aimVia:[],rayFrom:5,rayTo:5},loop:{...imageHold},noise:{...imageHold},denoise:{...imageHold},
 };
 export function applyObservatoryShots(beats:Beat[]){for(const beat of beats){if(beat.id==='room')continue;Object.assign(beat,shots[beat.id]??{});if(['bvh','sah','aabb','traversal'].includes(beat.id)){beat.rayFrom=4.45;beat.rayTo=4.45;}}}
 export const observatoryFinalView={camera:[94,62,-59] as Vec3,target:[...route[5]] as Vec3};
