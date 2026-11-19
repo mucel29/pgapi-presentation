@@ -1,8 +1,8 @@
 # Algoritmul Ray Tracing
 
-Prezentare în română pentru Programare grafică avansată și prelucrarea imaginilor: 15 teme, patru secvențe de deplasare, aproximativ 17–19 minute cu opriri pentru demonstrații, urmate de explorare opțională.
+Prezentare în română pentru Programare grafică avansată și prelucrarea imaginilor: 15 teme, 25 de pași, cinci secvențe de deplasare, aproximativ 19 minute cu opriri pentru demonstrații, urmate de explorare opțională.
 
-Începem la un birou obișnuit, cu PC și monitor. Intrăm prin monitor într-un observator suspendat peste un canion: stânci colorate, o punte cu grinzi, un instrument difuz cian, un heliostat de bronz cu ramă, o placă groasă de sticlă și un far îndepărtat. Un singur traseu leagă aceste repere. BVH-ul didactic este construit din triunghiurile reale ale punții; numărul de teste și closest-hit provin din aceeași geometrie.
+Începem la un birou obișnuit, cu PC și monitor. Intrăm prin monitor într-un observator suspendat peste un canion: stânci colorate, Stanford Bunny, un instrument difuz cian, un heliostat de bronz cu ramă, o placă groasă de sticlă și un far îndepărtat. Un singur traseu leagă aceste repere. BVH-ul separat conține cele 948 de triunghiuri ale modelului Stanford Bunny. Raza reală sticlă → far trece aproape de model; interogarea implicită verifică această ratare, iar presetul „Lovește modelul” produce o intersecție reală.
 
 Raza pornește înaintea observatorului. Camera o urmărește pe segmente lungi între reperele din canion, apoi se așază la fiecare demonstrație. La sticlă sunt distincte sosirea, intrarea, ieșirea și continuarea. Navigarea rămâne manuală.
 
@@ -66,7 +66,7 @@ Implementarea păstrează:
 - Reset și filtru à-trous ghidat de normal/depth/albedo.
 - Raw accumulation separat de output-ul filtrat; reproiecția, SVGF, NRD și OIDN sunt explicate, nu integrate.
 
-Experimentul Monte Carlo folosește un semnal scalar Bernoulli cunoscut, cu seed fix, și arată estimări și RMSE. Diagrama filtrării este conceptuală. Niciuna nu este o captură path-traced a scenei. Comparațiile path-traced la multe samples nu au fost regenerate.
+Comparația principală folosește aceeași imagine raster a camerei inițiale în ambele jumătăți: 1 spp fix în stânga, zgomot simulat mediat la N samples în dreapta. Acumularea temporală păstrează media la cameră fixă și șterge istoricul la schimbarea camerei. Reproiecția și filtrarea au demonstrații sintetice separate. Aceste imagini sunt etichetate ca simulări și nu sunt capturi path-traced.
 
 Orbit: drag; pan: click dreapta; zoom: scroll; deplasare: W/A/S/D și Q/E; Shift pentru viteză. Există reset cameră și revenire la prezentare. Fără floating-point render targets, rămâne disponibilă explorarea rasterizată.
 
@@ -78,7 +78,7 @@ Revizia canionului este exclusiv web. Fișierele PPTX și exporturile existente 
 
 Capturi deterministe fără UI: `?capture=diffuse`, `?capture=to-glass`, `?capture=final`. Inclusiv `final` și aliasul `beauty` sunt rasterizate. Adaugă `&ui=1` pentru interfață sau `&phase=0.5` pentru un moment precis din tranziție. `body[data-capture-ready="true"]` indică finalizarea capturii. Rasterul redus este mărit cu nearest-neighbor; textul și comenzile DOM rămân clare la rezoluția ecranului.
 
-Verificarea în browserul integrat a acoperit desktop 1280 × 720 și telefon 390 × 844: camera cu PC, heliostatul, sticla cu ambele interfețe și normalele vizibile, adăugarea de samples în aceeași lume, arborele BVH, traversarea și rezultatul numeric, intersecția interactivă, codul, notele și farul final. Valorile implicite ale traversării sunt 15 teste AABB, 6 teste de triunghi, triunghiul #98 și tClosest = 36.277; sumarul rămâne fixat deasupra comenzilor. Verificările geometrice complete au trecut 41 de teste, iar TypeScript și build-ul Vite au trecut. Path tracer-ul nu a fost pornit în această revizie.
+Revizia curentă a trecut verificarea TypeScript, șapte fișiere de teste concentrate pe calcule și demonstrații și build-ul Vite. Interogarea implicită a modelului are 15 teste AABB și 14 teste de triunghi, fără hit; presetul de hit a fost comparat cu brute force. Verificarea vizuală a noii prezentări rămâne manuală. Path tracer-ul nu a fost pornit.
 
 
 ## Preview prin tailnet

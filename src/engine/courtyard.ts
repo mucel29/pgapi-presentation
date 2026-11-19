@@ -2,11 +2,12 @@ import * as T from 'three';
 import {materialPalette,polishedRoughness} from '../core/transport.ts';
 import {daylightEnvironment} from './lighting.ts';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import {sphereCenter,sphereRadius,metalHit,metalNormal,glassEntry,glassExit,lightHit,outsideGlass} from '../core/route.ts';
+import {sphereCenter,metalHit,metalNormal,glassEntry,glassExit,lightHit,outsideGlass} from '../core/route.ts';
 import {observatory} from '../core/world.ts';
 import {type Vec3} from '../core/math.ts';
 import {surfaceRotation} from '../core/surface-frame.ts';
-import {createTeachingData} from '../core/teaching.ts';
+import {sphereGeometry} from '../core/sphere-mesh.ts';
+import {createAccelerationData,probePosition,probeScale} from '../core/acceleration-model.ts';
 
 // Kept as the public factory name so the existing explorer uses the same world.
 export function createCourtyard(){
@@ -38,7 +39,7 @@ export function createCourtyard(){
  for(const z of [25,36,47,58]){box([.35,3,.35],[-78,13,z],steel);box([.35,3,.35],[-48,13,z],steel);}box([.24,.24,34],[-78,14.4,41],steel);box([.24,.24,34],[-48,14.4,41],steel);
  box([6,.5,10],[-75,23,42],dark);for(const x of [-77,-73])box([.3,11,.3],[x,17.2,42],steel);
  box([10,1,10],[-35,11.7,-8],floor);cylinder(1.7,1.2,[-35,12.7,-8],steel);
- const sphere=mesh(new T.SphereGeometry(sphereRadius,20,12),ochre,sphereCenter);sphere.name='Painted cyan receiver — analytic diffuse surface';
+ const sphere=mesh(sphereGeometry(),ochre,sphereCenter);sphere.name='Cyan receiver — triangle mesh';
  const ring=mesh(new T.TorusGeometry(4.5,.14,4,32),pale,[-35,12.6,-8]);ring.rotation.x=Math.PI/2;
  for(const x of [-40,-30])box([.4,4,.4],[x,13.5,-8],steel);
  // The heliostat is visibly an optical instrument: a thin framed surface,
@@ -62,23 +63,14 @@ export function createCourtyard(){
  const beaconBase:[number,number,number]=[lightHit[0],37.5,lightHit[2]];box([18,1,18],beaconBase,floor);for(const x of [-4,4])strut([beaconBase[0]+x,38,beaconBase[2]],[lightHit[0]+x,lightHit[1]-5,lightHit[2]],.32,steel);
  cylinder(.23,18,[lightHit[0],lightHit[1]+12,lightHit[2]],pale);box([3,.5,3],[lightHit[0],lightHit[1]+21,lightHit[2]],emissive);
  const area=new T.RectAreaLight('#ffd59a',12,10,9);area.position.copy(lamp.getWorldPosition(new T.Vector3())).addScaledVector(d,-.1);area.lookAt(new T.Vector3(...glassExit));scene.add(area);
- // Real bridge/truss: all 144 faces form the exact shared BVH primitive set.
- const teachingData=createTeachingData(),teaching=mesh(teachingData.geometry,orange,[0,0,0]);teaching.name='Canyon bridge truss — 144 actual triangles';
- const bridge=observatory.bridge;
- const bridgeFloor=bridge.center[1]-bridge.height/2-.5;
- box([bridge.span+3,.6,bridge.width+1],[bridge.center[0],bridgeFloor,bridge.center[2]],dark);
- for(const x of [bridge.center[0]-bridge.span/2,bridge.center[0]+bridge.span/2]){
-  box([6,1,10],[x,bridgeFloor-.4,bridge.center[2]],floor);box([3,bridgeFloor+70,7],[x,(bridgeFloor-70)/2,bridge.center[2]],shadowStone);
- }
  // The access/service line stays well below the selected optical corridors.
  for(const [a,b] of [ [[-48,11.4,25],[7,16.8,34]], [[17,17.2,27],[55,28.4,-20]] ] as [Vec3,Vec3][]){
   strut(a,b,.16,steel);strut([a[0],a[1]-.6,a[2]],[b[0],b[1]-.6,b[2]],.09,dark);
  }
- // Small red service markers add distance cues, not a competing installation.
- for(const [x,y,z] of [[bridge.center[0]-bridge.span/2,bridgeFloor,bridge.center[2]],[bridge.center[0]+bridge.span/2,bridgeFloor,bridge.center[2]],[62,30,-28]]){box([.3,2,.3],[x,y+1,z+4],pale);box([.75,.35,.75],[x,y+2.1,z+4],orange);}
+ const probeData=createAccelerationData(),probe=mesh(probeData.geometry,new T.MeshStandardMaterial({vertexColors:true,metalness:.15,roughness:.65,side:T.DoubleSide,flatShading:true}),probePosition);probe.scale.setScalar(probeScale);probe.name='Stanford Bunny — the ray passes just beside it';
  scene.add(new T.HemisphereLight('#adc9da','#594441',1.05));
  const sun=new T.DirectionalLight('#ffddb1',3.2);sun.position.set(-95,140,75);sun.target.position.set(20,10,-20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-175,right:175,top:150,bottom:-140,far:440});sun.shadow.normalBias=.1;sun.shadow.bias=-.0001;scene.add(sun,sun.target);
  scene.environment=daylightEnvironment();scene.environmentIntensity=.32;scene.updateMatrixWorld(true);
- return {scene,world,materials,teaching,reflector,reflectorFrame:frame,sphere,pane,lamp,...teachingData,setBeauty(_beauty:boolean){scene.fog=new T.Fog(sky,155,380);}};
+ return {scene,world,materials,probe,teaching:probe,reflector,reflectorFrame:frame,sphere,pane,lamp,...probeData,setBeauty(_beauty:boolean){scene.fog=new T.Fog(sky,155,380);}};
 }
 export type Courtyard=ReturnType<typeof createCourtyard>;

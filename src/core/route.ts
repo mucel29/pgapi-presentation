@@ -1,10 +1,12 @@
 import {materialThroughput} from './transport.ts';
 import {observatory} from './world.ts';
+import {primaryHit} from './sphere-mesh.ts';
 import {add,sub,mul,dot,normalize,reflect,refract,intersectSphere,type Vec3} from './math.ts';
 // A deterministic selected path. Each material interaction is locally valid.
 export const origin:Vec3=[...observatory.origin],sphereCenter:Vec3=[...observatory.sphere],sphereRadius=observatory.sphereRadius;
-const incoming=normalize(sub(sphereCenter,origin));
-export const diffuseHit=add(origin,mul(incoming,intersectSphere(origin,incoming,sphereCenter,sphereRadius)!));
+// The primary ray hits one triangle of the sphere mesh. The shading normal stays smooth.
+const primary=primaryHit();
+export const diffuseHit=add(origin,mul(primary.d,primary.t));
 export const diffuseNormal=normalize(sub(diffuseHit,sphereCenter));
 export const metalHit:Vec3=[...observatory.mirror],glassEntry:Vec3=[...observatory.glass];
 const metalIn=normalize(sub(metalHit,diffuseHit)),metalOut=normalize(sub(glassEntry,metalHit));

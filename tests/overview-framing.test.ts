@@ -2,7 +2,7 @@ import {test} from 'node:test';import assert from 'node:assert/strict';import * 
 import {beats} from '../src/content/chapters.ts';import {route} from '../src/core/route.ts';
 import {shotPose} from '../src/core/cinematics.ts';import {createCourtyard} from '../src/engine/courtyard.ts';import {JourneyVisuals} from '../src/engine/visuals.ts';
 test('lessons continue beyond glass without a global camera return',()=>{
- for(const aspect of [16/9,9/16])for(const id of ['cost','bvh','to-light','light']){
+ for(const aspect of [16/9,9/16])for(const id of ['bvh','aabb','to-light','light']){
   const i=beats.findIndex(b=>b.id===id),a=shotPose(beats[i-1],beats[Math.max(0,i-2)],1,aspect),b=shotPose(beats[i],beats[i-1],1,aspect);
   assert.ok(Math.hypot(...a.position.map((v,k)=>v-b.position[k]))<65,id);
   assert.ok(b.position[0]>=a.position[0]-1,id);
@@ -24,16 +24,17 @@ test('sampling and loop keep only the unscaled physical path after source/back/r
  }
 });
 test('bridge query remains a separate actual-mesh test while the optical path stays as context',()=>{
- const room=createCourtyard(),visuals=new JourneyVisuals(room),beat=beats.find(b=>b.id==='cost')!;
+ const room=createCourtyard(),visuals=new JourneyVisuals(room),beat=beats.find(b=>b.id==='bvh')!;
  visuals.apply(beat);visuals.update(8,beat.rayTo);
  assert.equal(visuals.path.visible,true);assert.equal(visuals.packet.visible,false);
- assert.ok(visuals.guideAnchors.some(a=>a.text==='intersectScene · rază de test'));
+ assert.ok(visuals.guideAnchors.some(a=>a.text==='interogare: segmentul 5'));
+ assert.ok(visuals.traversal.triangle>=room.bridgeTriangleCount,'the real segment passes the bridge and ends on the beacon aperture');
  assert.deepEqual(visuals.testRayOrigin,room.rayOrigin);assert.ok(visuals.testRayDirection.every((v,i)=>Math.abs(v-room.rayDirection[i])<1e-12));
  assert.equal(visuals.traversal.triangle,room.traversal.triangle);assert.ok(visuals.traversal.triangle>=0);
 });
 test('essential guide labels are visible projected anchors rather than raster text sprites',()=>{
  const visuals=new JourneyVisuals(createCourtyard());
- for(const id of ['diffuse','materials','to-glass','sah','aabb']){
+ for(const id of ['diffuse','materials','to-glass','bvh','aabb']){
   const beat=beats.find(b=>b.id===id)!;visuals.apply(beat);visuals.update(8,beat.rayTo);
   const labels=visuals.guideAnchors;assert.ok(labels.length>0,id);assert.ok(labels.every(o=>o.text.length>0&&o.point.every(Number.isFinite)));
  }
@@ -53,9 +54,9 @@ test('diffuse selection requires the next beat and replay restores the same expl
  visuals.apply(candidate);assert.equal(visuals.diffusePhase,'candidates');
  visuals.apply(chosen);assert.equal(visuals.diffusePhase,'selected');
 });
-test('BVH and traversal automatically descend actual boxes and triangle tests then repeat',()=>{
+test('traversal automatically descends actual boxes and triangle tests then repeat',()=>{
  const visuals=new JourneyVisuals(createCourtyard());
- for(const id of ['bvh','traversal']){
+ for(const id of ['traversal']){
   const beat=beats.find(b=>b.id===id)!;visuals.apply(beat);assert.equal(visuals.manualStep,null);assert.equal(visuals.currentHit?.triangle,-1);
   visuals.update(1.8,beat.rayTo);assert.ok(visuals.lastStep>0);assert.ok(visuals.event.node.depth>0);
   const leafStep=visuals.traversal.events.findIndex(e=>e.testedTriangle!==undefined);assert.ok(leafStep>0);

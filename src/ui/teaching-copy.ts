@@ -1,19 +1,18 @@
 export const teachingCopy:Record<string,{text:string;formula?:string}>={
- room:{text:'Ray tracing răspunde la interogări geometrice. Path tracing repetă aceste interogări pentru a estima lumina unui pixel.'},
- ray:{text:'o este orificiul camerei virtuale. q este un sample în celula pixelului; camera cu care privești scena este un observator separat.',formula:'d = normalize(q − o) · r(t) = o + t·d'},
- hit:{text:'Exercițiu separat: raza și triunghiul din figură. Raza galbenă din canion are o intersecție independentă cu sfera.',formula:'HIT ⇔ t > 0, u ≥ 0, v ≥ 0, u + v ≤ 1'},
- diffuse:{text:'β este ponderea RGB a traseului. ρ este reflectanța difuză; PDF p descrie cât de probabilă este direcția aleasă.',formula:'f = ρ/π · p = cosθ/π\nβ′ = β · f cosθ/p = β · ρ'},
- materials:{text:'βin × reflectanța RGB a metalului = βout. Normala n bisectează unghiurile reflexiei ideale. Materialul folosește roughness 0.055, deci α = roughness² ≈ 0.0030.',formula:'θ incident = θ reflectat'},
- samples:{text:'Fiecare traseu produce o estimare pentru același pixel. Schema folosește patru contribuții RGB alese pentru exemplu; nu calculează iluminarea canionului.',formula:'N samples → N estimări · mai multe bounces → trasee mai lungi'},
- loop:{text:'Pentru fiecare sample, repetăm interacțiunile până la terminare. L adună radiance RGB. β ponderează fiecare contribuție; PDF este densitatea direcției eșantionate. Valorile de mai jos sunt un model didactic.'},
- cost:{text:'Traseul optic este în pauză. Comparăm separat aceeași rază și aceleași triunghiuri. Un test de cutie poate elimina un întreg grup înaintea testelor de triunghi.'},
- bvh:{text:'Rădăcina cuprinde toată puntea. Copiii împart triunghiurile; o frunză păstrează un grup mic pentru testarea exactă.'},
- sah:{text:'S este aria suprafeței cutiei, N numărul triunghiurilor. Costurile de traversare Ct și intersecție Ci sunt ambele 1.',formula:'C = 1 + (Sₗ/S)Nₗ + (Sᵣ/S)Nᵣ'},
- aabb:{text:'Interogare pe cutia rădăcină a punții. Aceeași rază o + t·d produce intervalele de mai jos și contactele tNear / tFar din lume.',formula:'tNear = max(tX−, tY−, tZ−, 0)\ntFar = min(tX+, tY+, tZ+)'},
- traversal:{text:'Portocaliu: nod activ · verde: acceptat · stins: respins · magenta: cel mai apropiat triunghi. Stiva păstrează nodurile încă de vizitat.'},
- noise:{text:'Comparație Monte Carlo pe un semnal sintetic cunoscut. Mai multe estimări reduc zgomotul, dar nu repară transportul omis.',formula:'eroare standard ∝ 1/√N'},
- denoise:{text:'Demonstrație CPU pe un semnal sintetic. Trei treceri spațiale compară normală, adâncime și albedo înainte de a media vecinii.'},
- light:{text:'Întoarcem contribuția traseului selectat în pixelul q. RGB este liniar; modelul didactic omite ponderile Fresnel, absorbția și MIS.'}
+ room:{text:'Ray tracing găsește ce suprafață vede o rază. Path tracing repetă aceste interogări ca să estimeze lumina unui pixel.'},
+ ray:{text:'o este camera virtuală. q este un punct din pixel. Camera prin care vezi canionul doar urmărește raza.',formula:'d = normalize(q − o) · r(t) = o + t·d'},
+ hit:{text:'Triunghiul #187 al sferei, lovit de raza primară. Mută u și v: raza pleacă tot din cameră, spre alt punct P.',formula:'HIT ⇔ t > ε, u ≥ 0, v ≥ 0, u + v ≤ 1'},
+ diffuse:{text:'β este ponderea RGB a traseului. ρ este albedo-ul. p este probabilitatea direcției alese.',formula:'f = ρ/π · p = cosθ/π\nβ′ = β · f cosθ/p = β · ρ'},
+ materials:{text:'Metalul înmulțește β cu reflectanța lui RGB. Sticla îndoaie raza la intrare și la ieșire. Cu fețe paralele, raza iese paralelă cu direcția inițială.',formula:'θ incident = θ reflectat · η₁ sinθ₁ = η₂ sinθ₂'},
+ samples:{text:'Fiecare traseu dă o estimare pentru același pixel. Bounces limitează lungimea fiecărui traseu.',formula:'N samples → N estimări · mai multe bounces → trasee mai lungi'},
+ loop:{text:'Pentru fiecare sample repetăm interacțiunile până la terminare. L adună lumina. β ponderează fiecare contribuție.'},
+ bvh:{text:'Stanford Bunny: 948 de triunghiuri. Ierarhia completă este discretă; doar cutia testată acum este accentuată. O frunză conține câteva triunghiuri.',formula:'C = 1 + (Sₗ/S)Nₗ + (Sᵣ/S)Nᵣ'},
+ aabb:{text:'Aceeași rază o + t·d intersectează cele trei perechi de plane ale cutiei rădăcină.',formula:'tNear = max(tX−, tY−, tZ−, 0)\ntFar = min(tX+, tY+, tZ+)'},
+ traversal:{text:'Auriu: cutia activă. Roz: triunghiul lovit. Raza traseului ratează iepurele; „Lovește modelul” arată un hit real.'},
+ noise:{text:'Fiecare update adaugă un sample nou la media pixelului. Eroarea scade lent.',formula:'eroare standard ∝ 1/√N'},
+ temporal:{text:'Camera fixă: fiecare cadru adaugă o estimare nouă. Următorul pas arată separat reproiecția pentru un cub în mișcare.',formula:'Cₙ = Cₙ₋₁ + (Sₙ − Cₙ₋₁)/n'},
+ denoise:{text:'Pixelul marcat este lângă muchie. Cercurile arată ponderea fiecărui vecin la pasul curent.',formula:'w = kernel · wNormal · wDepth · wAlbedo · wLuminance'},
+ light:{text:'Contribuția traseului intră în pixelul q. Valorile RGB sunt liniare.'}
 };
 export const sourceTitles:Record<string,string>={
  reference:'Prezentarea de referință',weekend:'Ray Tracing in One Weekend',next:'Ray Tracing: The Next Week',pbrt:'PBRT, ediția 4: BVH și SAH',svgf:'Schied et al. (2017): SVGF',nrd:'NVIDIA Real-Time Denoisers',oidn:'Intel Open Image Denoise',tracer:'three-gpu-pathtracer v0.0.23',meshbvh:'three-mesh-bvh'

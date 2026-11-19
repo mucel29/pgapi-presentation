@@ -9,7 +9,9 @@ import {Reflector} from 'three/addons/objects/Reflector.js';
 import {cosineHemisphere,normalize,sub,add,mul,rng,reflect,type Vec3} from '../core/math.ts';
 import {route,diffuseNormal,metalNormal,glassNormal,origin,throughput} from '../core/route.ts';
 import {traceSAH,type Node} from '../core/bvh.ts';
+import {createAccelerationData} from '../core/acceleration-model.ts';
 import {materialPalette} from '../core/transport.ts';
+import {primaryHit} from '../core/sphere-mesh.ts';
 import {slabIntervals} from '../core/experiments.ts';
 import type {Beat} from '../content/chapters.ts';
 import type {Courtyard} from './courtyard.ts';
@@ -34,11 +36,14 @@ export class JourneyVisuals{
  root=new T.Group();rasterOnly=new T.Group();path=new T.Group();hemisphere=new T.Group();normals=new T.Group();boxes=new T.Group();wire=new T.Group();materialRays=new T.Group();
  sampleRays=new T.Group();private sampleCount=2;private sampleDepth=3;private samplePaths:{points:Vec3[];segments:T.Mesh[];head:T.Mesh;pixel:T.Mesh;started:number}[]=[];private playbackStarted=0;
  packet=marker(0xfff3cd,.2);private headHalo=marker(GOLD,.42);private tail=beam(0xffedbb,.13);private tailHalo=beam(GOLD,.26,.16);private contact=new T.Mesh(new T.TorusGeometry(.58,.045,6,32),new T.MeshBasicMaterial({color:GOLD,transparent:true,opacity:.7,depthWrite:false,toneMapped:false}));segments:T.Mesh[]=[];boxObjects=new Map<number,{group:T.Group;ink:LineMaterial;outline:LineMaterial}>();nodes:Node[]=[];selected:Node;lastStep=-1;manualStep:number|null=null;beat:Beat|null=null;progress=0;revision=0;
- testRayOrigin:Vec3=[0,0,0];testRayDirection:Vec3=[0,0,-1];rayCase='hit';private traceResult:ReturnType<typeof traceSAH>;private testBeam:T.Mesh;private hitMesh:T.Mesh;private hitOutline:LineSegments2;private hitCorners=[marker(0xffedf6,.1),marker(0xffedf6,.1),marker(0xffedf6,.1)];private hitLabel=textLabel('closest-hit','#ff96ce');private hitPoint=marker(0xff70b8,.13);private hitId=-2;private highlightKey='';
+ testRayOrigin:Vec3=[0,0,0];testRayDirection:Vec3=[0,0,-1];rayCase='hit';primaryTriangle!:LineSegments2;private primaryInk!:LineMaterial;private traceResult:ReturnType<typeof traceSAH>;private testBeam:T.Mesh;private hitMesh:T.Mesh;private hitOutline:LineSegments2;private hitCorners=[marker(0xffedf6,.1),marker(0xffedf6,.1),marker(0xffedf6,.1)];private hitLabel=textLabel('closest-hit','#ff96ce');private hitPoint=marker(0xff70b8,.13);private hitId=-2;private highlightKey='';
  private fans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private mirrorFans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private highlight:T.Mesh;private triangleInk:LineMaterial;private triangleOutline:LineMaterial;private selectedEdges:LineSegments2;private selectedInk:LineMaterial;private hitInk:LineMaterial;private elapsed=0;private userSelected=false;private splitPlane:T.Mesh;candidateIndex=0;
  room:Courtyard;
+ accelerationData:ReturnType<typeof createAccelerationData>;accelerationScene=new T.Scene();accelerationModel!:T.Mesh;
+ get accelerationActive(){return ['cost','bvh','sah','aabb','traversal'].includes(this.beat?.visual??'');}
+ get triangleCount(){return this.accelerationData.triangles.length;}
  private splitLabel=textLabel('plan X','#ffc576');
- private queryLabel=textLabel('intersectScene · rază de test','#ffdf98');
+ private queryLabel=textLabel('raza traseului · Stanford Bunny','#ffdf98');
  cameraRig=new T.Group();glassRig=new T.Group();selection=new T.Group();slabContacts=new T.Group();sahVolumes=new T.Group();
  private normalEvents:T.Group[]=[];private reflectionProof=new T.Group();private mirrorSelected:T.Mesh;private selectedDirection=textLabel('direcția aleasă','#ffdf98');
  private slabNear=marker(0x8cdbb4,.35);private slabFar=marker(0xffc576,.35);
@@ -50,8 +55,11 @@ export class JourneyVisuals{
   });return anchors;
  }
  constructor(room:Courtyard){
-  this.room=room;
-  this.testRayOrigin=[...room.rayOrigin];this.testRayDirection=[...room.rayDirection];this.traceResult=room.traversal;this.root.name='Illustrations — excluded from path tracing';room.scene.add(this.root);const mirror=new Reflector(new T.PlaneGeometry(9,10),{textureWidth:256,textureHeight:256,color:materialPalette.metal,clipBias:.003,multisample:0});mirror.position.set(...route[2]).addScaledVector(new T.Vector3(...metalNormal),.025);mirror.quaternion.copy(surfaceRotation(metalNormal));const renderMirror=mirror.onBeforeRender.bind(mirror);mirror.onBeforeRender=(renderer,scene,camera,geometry,material,group)=>{const rv=room.reflector.visible,fv=room.reflectorFrame.visible,iv=this.root.visible;room.reflector.visible=false;room.reflectorFrame.visible=false;this.root.visible=false;try{renderMirror(renderer,scene,camera,geometry,material,group);}finally{room.reflector.visible=rv;room.reflectorFrame.visible=fv;this.root.visible=iv;}};mirror.name='Raster planar reflection — excluded from tracer';this.rasterOnly.name='Raster reflections';room.scene.add(this.rasterOnly);this.rasterOnly.add(mirror);
+  this.room=room;this.accelerationData=room;
+  this.testRayOrigin=[...this.accelerationData.rayOrigin];this.testRayDirection=[...this.accelerationData.rayDirection];this.traceResult=this.accelerationData.traversal;
+  this.accelerationScene.background=new T.Color('#14232e');
+  this.accelerationModel=new T.Mesh(this.accelerationData.geometry,new T.MeshStandardMaterial({vertexColors:true,roughness:.65,metalness:.15,side:T.DoubleSide,flatShading:true}));this.accelerationModel.name='Stanford Bunny — BVH triangle mesh';this.accelerationScene.add(this.accelerationModel,new T.HemisphereLight(0xd9eef8,0x27323e,2.2));const modelLight=new T.DirectionalLight(0xffdfb0,3);modelLight.position.set(-8,14,16);this.accelerationScene.add(modelLight);
+  this.root.name='Illustrations — excluded from path tracing';room.scene.add(this.root);const mirror=new Reflector(new T.PlaneGeometry(9,10),{textureWidth:256,textureHeight:256,color:materialPalette.metal,clipBias:.003,multisample:0});mirror.position.set(...route[2]).addScaledVector(new T.Vector3(...metalNormal),.025);mirror.quaternion.copy(surfaceRotation(metalNormal));const renderMirror=mirror.onBeforeRender.bind(mirror);mirror.onBeforeRender=(renderer,scene,camera,geometry,material,group)=>{const rv=room.reflector.visible,fv=room.reflectorFrame.visible,iv=this.root.visible;room.reflector.visible=false;room.reflectorFrame.visible=false;this.root.visible=false;try{renderMirror(renderer,scene,camera,geometry,material,group);}finally{room.reflector.visible=rv;room.reflectorFrame.visible=fv;this.root.visible=iv;}};mirror.name='Raster planar reflection — excluded from tracer';this.rasterOnly.name='Raster reflections';room.scene.add(this.rasterOnly);this.rasterOnly.add(mirror);
   (this.headHalo.material as T.MeshBasicMaterial).opacity=.15;this.headHalo.renderOrder=13;this.packet.renderOrder=15;this.contact.renderOrder=14;
   this.root.add(this.headHalo,this.tail,this.tailHalo,this.contact);
   this.root.add(this.sampleRays,this.path,this.hemisphere,this.normals,this.boxes,this.wire,this.materialRays,this.packet,this.cameraRig,this.glassRig,this.selection,this.slabContacts,this.sahVolumes,this.reflectionProof,this.splitLabel);
@@ -134,25 +142,27 @@ export class JourneyVisuals{
    for(let corner=0;corner<8;corner++)for(const bit of [1,2,4])if(!(corner&bit))positions.push(...corners[corner].toArray(),...corners[corner|bit].toArray());
    const geometry=new LineSegmentsGeometry().setPositions(positions),outline=new LineMaterial({color:bvhInk.outline,linewidth:8,worldUnits:false,depthTest:false,depthWrite:false,toneMapped:false}),ink=new LineMaterial({color:bvhInk.child,linewidth:3.5,worldUnits:false,depthTest:false,depthWrite:false,toneMapped:false});
    const darkLine=new LineSegments2(geometry,outline),colorLine=new LineSegments2(geometry,ink);darkLine.renderOrder=22;colorLine.renderOrder=23;colorLine.computeLineDistances();const group=new T.Group();group.add(darkLine,colorLine);this.boxObjects.set(n.id,{group,ink,outline});this.boxes.add(group);n.children?.forEach(collect);
-  };collect(room.tree);this.selected=room.tree;
+  };collect(this.tree);this.selected=this.tree;
   // WireframeGeometry retains every coplanar diagonal: these are the same
-  // 144 mesh triangles tested by the BVH, not just twelve beam silhouettes.
-  const rawEdges=new T.WireframeGeometry(room.teaching.geometry),edgeGeometry=new LineSegmentsGeometry().setPositions(rawEdges.attributes.position.array as Float32Array);rawEdges.dispose();
-  this.triangleInk=new LineMaterial({color:0xe1f5ff,linewidth:1.1,transparent:true,opacity:.72,depthTest:false,depthWrite:false,toneMapped:false});
-  this.triangleOutline=new LineMaterial({color:0x16252e,linewidth:2.5,transparent:true,opacity:.7,depthTest:false,depthWrite:false,toneMapped:false});
+  // Wireframe of the same probe triangles used by the BVH.
+  const rawEdges=new T.WireframeGeometry(this.accelerationData.geometry),edgeGeometry=new LineSegmentsGeometry().setPositions(rawEdges.attributes.position.array as Float32Array);rawEdges.dispose();
+  this.triangleInk=new LineMaterial({color:0xe1f5ff,linewidth:1,transparent:true,opacity:.1,depthTest:false,depthWrite:false,toneMapped:false});
+  this.triangleOutline=new LineMaterial({color:0x16252e,linewidth:2.5,transparent:true,opacity:.25,depthTest:false,depthWrite:false,toneMapped:false});
   const darkEdges=new LineSegments2(edgeGeometry,this.triangleOutline),edges=new LineSegments2(edgeGeometry,this.triangleInk);darkEdges.renderOrder=16;edges.renderOrder=17;this.wire.add(darkEdges,edges);
-  this.highlight=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({color:0x27c5ed,side:T.DoubleSide,transparent:true,opacity:.42,depthTest:false,depthWrite:false}));this.highlight.renderOrder=15;
-  this.selectedInk=new LineMaterial({color:0x65e5ff,linewidth:1.7,transparent:true,opacity:.95,depthTest:false,depthWrite:false,toneMapped:false});this.selectedEdges=new LineSegments2(new LineSegmentsGeometry(),this.selectedInk);this.selectedEdges.renderOrder=18;
-  this.root.add(this.highlight,this.selectedEdges);this.splitPlane=new T.Mesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({color:0xffbf78,side:T.DoubleSide,transparent:true,opacity:.13,depthWrite:false}));this.root.add(this.splitPlane);const split=room.tree.split!;const size=new T.Vector3(...room.tree.max).sub(new T.Vector3(...room.tree.min));this.splitPlane.position.set(...room.tree.min).addScaledVector(size,.5);this.splitPlane.position.setComponent(split.axis,split.plane);this.splitPlane.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().setComponent(split.axis,1));this.splitPlane.scale.set(split.axis===0?size.z:size.x,split.axis===1?size.z:size.y,1);
+  this.highlight=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({color:0x27c5ed,side:T.DoubleSide,transparent:true,opacity:.16,depthTest:false,depthWrite:false}));this.highlight.renderOrder=15;
+  this.selectedInk=new LineMaterial({color:0x65e5ff,linewidth:1.2,transparent:true,opacity:.5,depthTest:false,depthWrite:false,toneMapped:false});this.selectedEdges=new LineSegments2(new LineSegmentsGeometry(),this.selectedInk);this.selectedEdges.renderOrder=18;
+  this.root.add(this.highlight,this.selectedEdges);this.splitPlane=new T.Mesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({color:0xffbf78,side:T.DoubleSide,transparent:true,opacity:.13,depthWrite:false}));this.root.add(this.splitPlane);const split=this.tree.split!;const size=new T.Vector3(...this.tree.max).sub(new T.Vector3(...this.tree.min));this.splitPlane.position.set(...this.tree.min).addScaledVector(size,.5);this.splitPlane.position.setComponent(split.axis,split.plane);this.splitPlane.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().setComponent(split.axis,1));this.splitPlane.scale.set(split.axis===0?size.z:size.x,split.axis===1?size.z:size.y,1);
   this.hitMesh=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({color:0xff70b8,side:T.DoubleSide,transparent:true,opacity:.72,depthTest:false,depthWrite:false,toneMapped:false}));this.hitMesh.renderOrder=30;
   this.hitInk=new LineMaterial({color:0xffedf6,linewidth:1.4,depthTest:false,depthWrite:false,toneMapped:false});this.hitOutline=new LineSegments2(new LineSegmentsGeometry(),this.hitInk);this.hitOutline.renderOrder=31;
   this.hitCorners.forEach((corner,i)=>{corner.name=`Closest triangle vertex ${i}`;corner.renderOrder=32;(corner.material as T.MeshBasicMaterial).depthTest=false;});
   this.root.add(this.hitMesh,this.hitOutline,this.hitPoint,...this.hitCorners,this.hitLabel);
-  const test=beam(0xffdf98,.05);this.testBeam=test;stretch(test,room.rayOrigin,add(room.rayOrigin,mul(room.rayDirection,36)));this.wire.add(test,this.queryLabel);
+  // The sphere triangle that the primary ray hits, the same one as in the panel.
+  {const tri=primaryHit().triangle,edges=[0,1,1,2,2,0].flatMap(i=>tri[i]);this.primaryInk=new LineMaterial({color:0xffffff,linewidth:2.2,depthTest:false,depthWrite:false,toneMapped:false});this.primaryTriangle=new LineSegments2(new LineSegmentsGeometry().setPositions(edges),this.primaryInk);this.primaryTriangle.renderOrder=40;this.primaryTriangle.visible=false;this.root.add(this.primaryTriangle);}
+  const test=beam(0xffdf98,.14);this.testBeam=test;stretch(test,this.accelerationData.rayOrigin,add(this.accelerationData.rayOrigin,mul(this.accelerationData.rayDirection,Number.isFinite(this.accelerationData.traversal.closest)?this.accelerationData.traversal.closest:28)));this.wire.add(test,this.queryLabel);
  }
- setResolution(width:number,height:number){for(const ink of [this.triangleInk,this.triangleOutline,this.selectedInk,this.hitInk])ink.resolution.set(width,height);for(const box of this.boxObjects.values()){box.ink.resolution.set(width,height);box.outline.resolution.set(width,height);box.ink.linewidth=1;box.outline.linewidth=2.4;}}
+ setResolution(width:number,height:number){for(const ink of [this.primaryInk,this.triangleInk,this.triangleOutline,this.selectedInk,this.hitInk])ink.resolution.set(width,height);for(const box of this.boxObjects.values()){box.ink.resolution.set(width,height);box.outline.resolution.set(width,height);box.ink.linewidth=1;box.outline.linewidth=2.4;}}
  get diffusePhase(){return this.beat?.id==='diffuse-chosen'?'selected':'candidates';}
- get traversalActive(){return ['bvh','traversal'].includes(this.beat?.visual??'');}
+ get traversalActive(){return ['traversal'].includes(this.beat?.visual??'');}
  get isEmitting(){
   if(this.beat?.visual==='diffuse')return this.diffusePhase==='candidates'&&this.elapsed<1.6;
   if(this.beat?.visual==='samples')return this.samplePaths.some((sample,i)=>i<this.sampleCount&&this.elapsed<sample.started+Math.min(this.sampleDepth,sample.segments.length)*.85);
@@ -168,18 +178,18 @@ export class JourneyVisuals{
  }
  get splitCandidates(){const candidates=[...this.tree.candidates].sort((a,b)=>a.cost-b.cost);return [candidates[0],candidates[Math.floor(candidates.length/3)],candidates[Math.floor(candidates.length*2/3)]];}
  setSplitCandidate(index:number){this.candidateIndex=Math.max(0,Math.min(2,index));this.revision++;this.updateBoxes();}
- get tree(){return this.room.tree;}get traversal(){return this.traceResult;}
- apply(beat:Beat){this.revision++;this.candidateIndex=0;this.beat=beat;this.elapsed=0;this.lastStep=-1;this.manualStep=null;this.selected=this.tree;this.userSelected=false;this.progress=beat.rayFrom;this.setCase('hit');this.manualStep=null;this.playbackStarted=0;this.samplePaths.forEach((sample,i)=>sample.started=i*.28);this.update(0,beat.rayFrom);}
+ get tree(){return this.accelerationData.tree;}get traversal(){return this.traceResult;}
+ apply(beat:Beat){this.revision++;this.candidateIndex=0;this.beat=beat;(this.accelerationActive?this.accelerationScene:this.room.scene).add(this.root);this.elapsed=0;this.lastStep=-1;this.manualStep=null;this.selected=this.tree;this.userSelected=false;this.progress=beat.rayFrom;this.setCase('hit');this.manualStep=null;this.playbackStarted=0;this.samplePaths.forEach((sample,i)=>sample.started=i*.28);this.update(0,beat.rayFrom);}
  select(id:number){this.revision++;this.userSelected=true;const step=this.traversal.events.findIndex(e=>e.node.id===id);if(this.traversalActive&&step>=0){this.manualStep=step;this.lastStep=step;}this.selected=this.nodes.find(n=>n.id===id)??this.tree;this.updateBoxes();}
  step(delta:number){this.userSelected=false;this.manualStep=Math.max(0,Math.min(this.traversal.events.length-1,(this.manualStep??Math.max(0,this.lastStep))+delta));this.update(this.elapsed,this.progress);}
  setCase(kind:string){
-  const o=this.room.rayOrigin;
+  const o=this.accelerationData.rayOrigin;
   if(kind==='miss')this.setRay(o,normalize([.7,1,0]),kind);
-  else if(kind==='other'){const tri=this.room.triangles[70],p=tri.reduce((a,v)=>a.map((x,k)=>x+v[k]/3) as Vec3,[0,0,0] as Vec3);this.setRay(o,normalize(sub(p,o)),kind);}
-  else this.setRay(o,this.room.rayDirection,'hit');
+  else if(kind==='other'){const tri=this.accelerationData.triangles[70],p=tri.reduce((a,v)=>a.map((x,k)=>x+v[k]/3) as Vec3,[0,0,0] as Vec3);this.setRay(o,normalize(sub(p,o)),kind);}
+  else this.setRay(o,this.accelerationData.rayDirection,'hit');
  }
  setRay(o:Vec3,d:Vec3,label='custom'){
-  this.testRayOrigin=[...o];this.testRayDirection=normalize(d);this.rayCase=label;this.traceResult=traceSAH(this.tree,this.room.triangles,this.testRayOrigin,this.testRayDirection);this.manualStep=null;this.lastStep=0;this.playbackStarted=this.elapsed;this.userSelected=false;this.selected=this.tree;this.revision++;
+  this.testRayOrigin=[...o];this.testRayDirection=normalize(d);this.rayCase=label;this.traceResult=traceSAH(this.tree,this.accelerationData.triangles,this.testRayOrigin,this.testRayDirection);this.manualStep=null;this.lastStep=0;this.playbackStarted=this.elapsed;this.userSelected=false;this.selected=this.tree;this.revision++;
   stretch(this.testBeam,this.testRayOrigin,add(this.testRayOrigin,mul(this.testRayDirection,Math.min(100,this.traceResult.closest+8)||36)));
   this.queryLabel.position.set(...add(this.testRayOrigin,[0,2,0]));
   this.updateBoxes();
@@ -187,15 +197,17 @@ export class JourneyVisuals{
  traversalPlayback(play:boolean){this.userSelected=false;this.playbackStarted=this.elapsed-Math.max(0,this.lastStep)*TRAVERSAL_SECONDS;this.manualStep=play?null:Math.max(0,this.lastStep);this.revision++;}
  get currentHit(){return this.traversalActive?this.event:this.traceResult;}
  get event(){return this.traversal.events[Math.max(0,this.lastStep)];}
- get displayRoot(){if(this.userSelected)return this.selected.depth>0?this.selected:this.tree;const active=this.traversalActive?this.event?.node:this.selected;if(!active||active.depth<2)return this.tree;const depth=Math.max(0,active.depth-2);return this.nodes.find(n=>n.depth===depth&&active.indices.every(i=>n.indices.includes(i)))??this.tree;}
- get bvhStage(){return 2;}
- visibleNodes(){const root=this.displayRoot;return this.nodes.filter(n=>n.depth>=root.depth&&n.depth<=root.depth+this.bvhStage&&n.indices.every(i=>root.indices.includes(i)));}
+ get displayRoot(){return this.tree;}
+ get bvhStage(){return Math.max(...this.nodes.map(n=>n.depth));}
+ visibleNodes(){return this.nodes;}
  private updateBoxes(){
   const c=this.beat?.visual??'',event=this.event;const active=this.traversalActive?event?.node:this.selected;
   for(const node of this.nodes){
-   const box=this.boxObjects.get(node.id)!,child=active?.children?.includes(node),recent=this.traversalActive?this.traversal.events.slice(Math.max(0,this.lastStep-3),this.lastStep+1).find(e=>e.node.id===node.id):undefined,rejected=recent?.status==='miss'||recent?.status==='pruned';
-   box.group.visible=this.boxes.visible&&(c==='aabb'?node===this.tree:c==='sah'?node===this.tree:Boolean(node===active||child||rejected));
-   const isActive=node===active,isRejected=isActive&&(event?.status==='miss'||event?.status==='pruned')||rejected;box.ink.color.set(isRejected?bvhInk.rejected:isActive?bvhInk.active:child?bvhInk.child:bvhInk.ancestor);box.ink.transparent=true;box.ink.opacity=isRejected?.22:isActive?1:child?.45:.2;box.outline.transparent=true;box.outline.opacity=isActive?.85:.35;box.ink.linewidth=isActive?2.2:1.2;box.outline.linewidth=isActive?4.2:2.5;box.ink.dashed=Boolean(isRejected);box.ink.dashSize=.35;box.ink.gapSize=.18;
+   const box=this.boxObjects.get(node.id)!;const isActive=node===active;
+   box.group.visible=this.boxes.visible;
+   box.ink.color.set(isActive?0xffd68b:0x9db4bf);box.ink.transparent=true;box.ink.opacity=isActive?1:.045;box.ink.linewidth=isActive?2.6:.65;box.ink.dashed=false;
+   box.outline.transparent=true;box.outline.opacity=isActive?.7:0;box.outline.linewidth=isActive?4.5:1;
+
   }
 
   const split=this.splitCandidates[this.candidateIndex];
@@ -208,19 +220,20 @@ export class JourneyVisuals{
   }
   this.splitLabel.visible=c==='sah';if(c==='sah'&&split){this.splitLabel.userData.guide.text=`plan ${'XYZ'[split.axis]}`;this.splitLabel.position.copy(this.splitPlane.position);}
   if(c==='sah'&&split){const size=new T.Vector3(...this.tree.max).sub(new T.Vector3(...this.tree.min));this.splitPlane.position.set(...this.tree.min).addScaledVector(size,.5);this.splitPlane.position.setComponent(split.axis,split.plane);this.splitPlane.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().setComponent(split.axis,1));this.splitPlane.scale.set(split.axis===0?size.z:size.x,split.axis===1?size.z:size.y,1);this.splitLabel.position.copy(this.splitPlane.position);}
-  const indices=c==='sah'&&split?this.tree.indices.filter(i=>{const tri=this.room.triangles[i],values=tri.map(p=>p[split.axis]);return (Math.min(...values)+Math.max(...values))/2<split.plane;}):this.traversalActive&&event?.status==='leaf'?(event.testedTriangle===undefined?event.node.indices:[event.testedTriangle]):active?.indices??[];this.highlight.visible=this.boxes.visible&&indices.length>0;
+  const indices=c==='sah'&&split?this.tree.indices.filter(i=>{const tri=this.accelerationData.triangles[i],values=tri.map(p=>p[split.axis]);return (Math.min(...values)+Math.max(...values))/2<split.plane;}):this.traversalActive&&event?.status==='leaf'?(event.testedTriangle===undefined?event.node.indices:[event.testedTriangle]):active?.indices??[];// Only the currently tested leaf triangle receives a filled overlay.
+  this.highlight.visible=this.boxes.visible&&event?.status==='leaf'&&this.traversalActive&&indices.length>0;
   this.selectedEdges.visible=this.highlight.visible;
   const key=indices.join(',');if(key!==this.highlightKey){
-   this.highlightKey=key;const positions=indices.flatMap(i=>this.room.triangles[i].flat());this.highlight.geometry.dispose();this.highlight.geometry=new T.BufferGeometry();this.highlight.geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));
-   const edges=indices.flatMap(i=>{const t=this.room.triangles[i];return [...t[0],...t[1],...t[1],...t[2],...t[2],...t[0]];});this.selectedEdges.geometry.dispose();this.selectedEdges.geometry=new LineSegmentsGeometry().setPositions(edges);
+   this.highlightKey=key;const positions=indices.flatMap(i=>this.accelerationData.triangles[i].flat());this.highlight.geometry.dispose();this.highlight.geometry=new T.BufferGeometry();this.highlight.geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+   const edges=indices.flatMap(i=>{const t=this.accelerationData.triangles[i];return [...t[0],...t[1],...t[1],...t[2],...t[2],...t[0]];});this.selectedEdges.geometry.dispose();this.selectedEdges.geometry=new LineSegmentsGeometry().setPositions(edges);
   }
   const hit=this.currentHit,id=hit?.triangle??-1,showHit=['cost','bvh','sah','aabb','traversal'].includes(c)&&id>=0;
   this.hitMesh.visible=this.hitOutline.visible=this.hitPoint.visible=this.hitLabel.visible=showHit;this.hitCorners.forEach(corner=>corner.visible=showHit);
-  if(id>=0){const tri=this.room.triangles[id];if(id!==this.hitId){
+  if(id>=0){const tri=this.accelerationData.triangles[id];if(id!==this.hitId){
    this.hitId=id;this.hitMesh.geometry.dispose();this.hitMesh.geometry=new T.BufferGeometry().setFromPoints(tri.map(p=>new T.Vector3(...p)));
    this.hitOutline.geometry.dispose();this.hitOutline.geometry=new LineSegmentsGeometry().setPositions([...tri[0],...tri[1],...tri[1],...tri[2],...tri[2],...tri[0]]);
    this.hitCorners.forEach((corner,i)=>corner.position.set(...tri[i]));
-   this.hitLabel.userData.guide.text=`closest-hit · T${id}`;this.hitLabel.position.set(...tri[0]).add(new T.Vector3(0,1.5,0));
+   this.hitLabel.userData.guide.text=`closest-hit · Bunny · T${id}`;this.hitLabel.position.set(...tri[0]).add(new T.Vector3(0,1.5,0));
   }this.hitPoint.position.set(...this.testRayOrigin).addScaledVector(new T.Vector3(...this.testRayDirection),hit!.closest);}
 
 
@@ -245,7 +258,8 @@ export class JourneyVisuals{
  update(elapsed:number,progress:number){
   this.elapsed=elapsed;this.progress=progress;const c=this.beat?.visual??'';const bvh=['cost','bvh','sah','aabb','traversal'].includes(c);
   // Selected and sampled paths keep their real world coordinates and scale.
-  this.path.visible=c!=='room';
+  this.path.visible=c!=='room'&&!bvh;
+  this.primaryTriangle.visible=c==='hit';
   this.packet.visible=!bvh&&!['room','samples','loop'].includes(c);
   this.segments.forEach((segment,i)=>{
    stretch(segment,route[i],route[i+1],Math.max(0,Math.min(1,progress-i)));

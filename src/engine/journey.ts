@@ -54,10 +54,10 @@ export class Journey{
   // predecessor. Direct links and explicit replays retain their canonical rail.
   this.transitionFrom=immediate||replay?previous:{...previous,camera:currentPosition,target:currentTarget,portraitCamera:currentPosition,portraitTarget:currentTarget,compactCamera:currentPosition,compactTarget:currentTarget};
   const destination=shotPose(b,previous,1,this.camera.aspect,this.sceneViewport.width);
-  this.transitionShot=!immediate&&!replay&&b.motion==='hold'&&this.camera.position.distanceTo(new T.Vector3(...destination.position))>1?{...b,motion:'arrive',seconds:2}:b;
+  this.transitionShot=!this.visuals.accelerationActive&& !['bvh','aabb','traversal'].includes(b.id)&&!immediate&&!replay&&b.motion==='hold'&&this.camera.position.distanceTo(new T.Vector3(...destination.position))>1?{...b,motion:'arrive',seconds:2}:b;
   this.from.set(...this.transitionFrom.camera);this.fromTarget.set(...this.transitionFrom.target);
   if(b.scene==='portal'&&!replay)this.portalFrom=immediate?[...portalStart]:[...this.monitorPosition];
-  this.visuals.root.visible=!['image','loop','noise','denoise'].includes(b.id);
+  this.visuals.root.visible=!['image','loop','noise','temporal','denoise','denoise-pipeline','temporal-motion'].includes(b.id);
   this.visuals.apply(b);if(immediate||this.transitionShot.seconds===0||matchMedia('(prefers-reduced-motion: reduce)').matches)this.finish();else this.updateTransition(0);
  }
  finish(){const b=this.beat;this.transition=1;this.elapsed=b.travel?b.seconds:0;this.updateTransition(1);this.visuals.update(this.elapsed,b.rayTo);this.visuals.fitHead(this.camera,this.canvas.height);this.invalidateRaster();}
@@ -77,7 +77,7 @@ export class Journey{
  stopTracing(){this.tracingRequests.invalidate();this.pathTracing=false;this.visuals.rasterOnly.visible=this.supported;this.finale?.stop();this.courtyard.setBeauty(true);this.resize();}
  setSettings(patch:Partial<RenderSettings>){Object.assign(this.pendingSettings,patch);this.finale?.setSettings(patch);if(patch.scale!==undefined&&this.exploring&&!this.pathTracing)this.resize();}
  returnToJourney(){this.stopTracing();this.exploring=false;this.controls.enabled=false;this.keys.clear();this.courtyard.setBeauty(false);this.visuals.root.visible=true;this.resize();this.setBeat(this.index,true);}
- pickBVH(clientX:number,clientY:number){const rect=this.canvas.getBoundingClientRect(),raycaster=new T.Raycaster();raycaster.setFromCamera(new T.Vector2((clientX-rect.left)/rect.width*2-1,1-(clientY-rect.top)/rect.height*2),this.camera);const hit=raycaster.intersectObject(this.courtyard.teaching,false)[0];if(!hit)return false;this.visuals.setRay(this.camera.position.toArray(),hit.point.clone().sub(this.camera.position).normalize().toArray());this.invalidateRaster();return true;}
+ pickBVH(clientX:number,clientY:number){const rect=this.canvas.getBoundingClientRect(),raycaster=new T.Raycaster();raycaster.setFromCamera(new T.Vector2((clientX-rect.left)/rect.width*2-1,1-(clientY-rect.top)/rect.height*2),this.camera);const hit=raycaster.intersectObject(this.visuals.accelerationModel,false)[0];if(!hit)return false;this.visuals.setRay(this.camera.position.toArray(),hit.point.clone().sub(this.camera.position).normalize().toArray());this.invalidateRaster();return true;}
  resetView(){this.camera.position.set(...finalView.camera);this.controls.target.set(...finalView.target);this.controls.update();this.finale?.invalidate();}
  private renderPortal(){
   const b=this.beat,aspect=this.camera.aspect,frame=Math.floor(this.elapsed*16);if(frame===this.portalFrame&&Math.abs(aspect-this.portalAspect)<1e-6)return;
@@ -110,6 +110,7 @@ export class Journey{
   if(!animated&&drawKey===this.drawKey)return;this.drawKey=drawKey;
   if(b.scene==='room'||b.scene==='portal'&&this.transition<portalCut){this.renderPortal();if(!this.room.scene.children.some(o=>o instanceof T.DirectionalLight&&o.shadow.map))this.renderer.shadowMap.needsUpdate=true;this.renderer.render(this.room.scene,this.camera);
 
-  }else {if(!this.courtyard.scene.children.some(o=>o instanceof T.DirectionalLight&&o.shadow.map))this.renderer.shadowMap.needsUpdate=true;this.renderer.render(this.courtyard.scene,this.camera);}
+  }else if(this.visuals.accelerationActive){this.renderer.render(this.visuals.accelerationScene,this.camera);}
+  else {if(!this.courtyard.scene.children.some(o=>o instanceof T.DirectionalLight&&o.shadow.map))this.renderer.shadowMap.needsUpdate=true;this.renderer.render(this.courtyard.scene,this.camera);}
  };
 }

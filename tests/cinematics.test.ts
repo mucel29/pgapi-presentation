@@ -50,7 +50,7 @@ test('the curved monitor approach has no physical occluders at screen edges/corn
  }assert.equal(checked,837);
 });
 test('long selected air legs reach their intended material without newly introduced architecture intercepting them',()=>{
- const court=createCourtyard(),ray=new T.Raycaster();assert.equal(court.triangles.length,144);
+ const court=createCourtyard(),ray=new T.Raycaster();assert.equal(court.triangles.length,court.bridgeTriangleCount+2);assert.ok(court.bridgeTriangleCount>1000);
  for(const leg of [0,1,2,4]){
   const from=new T.Vector3(...route[leg]),to=new T.Vector3(...route[leg+1]),direction=to.clone().sub(from).normalize(),length=from.distanceTo(to);
   ray.set(from.clone().addScaledVector(direction,.1),direction);ray.far=length-.2;
@@ -59,7 +59,7 @@ test('long selected air legs reach their intended material without newly introdu
 });
 test('forward observer rails after glass do not cross physical canyon architecture',()=>{
  const court=createCourtyard(),ray=new T.Raycaster();
- for(const aspect of [16/9,9/16])for(const id of ['cost','to-light']){
+ for(const aspect of [16/9,9/16])for(const id of ['bvh','to-light']){
   const i=beats.findIndex(b=>b.id===id),b=beats[i];let previous=new T.Vector3(...shotPose(b,beats[i-1],0,aspect).position);
   for(let k=1;k<=80;k++){
    const point=new T.Vector3(...shotPose(b,beats[i-1],k/80,aspect).position),direction=point.clone().sub(previous),distance=direction.length();

@@ -1,6 +1,6 @@
 import {accumulationExperiment,slabIntervals} from '../core/experiments.ts';
 import {dot,normalize,sub,type Vec3} from '../core/math.ts';
-import {route,glassNormal,insideGlass,outsideGlass} from '../core/route.ts';
+import {route,glassNormal,metalNormal,insideGlass,outsideGlass} from '../core/route.ts';
 
 export function pixelGrid(values:number[],width:number,height:number,x:number,y:number,cell=10){
  return `<g transform="translate(${x} ${y})">${values.map((v,i)=>{const c=Math.round(30+v*215);return `<rect x="${i%width*cell}" y="${Math.floor(i/width)*cell}" width="${cell+.1}" height="${cell+.1}" fill="rgb(${Math.round(c*.91)},${c},${Math.round(c*.92)})"/>`;}).join('')}<rect width="${width*cell}" height="${height*cell}" fill="none" stroke="#8aaca2"/></g>`;
@@ -8,6 +8,11 @@ export function pixelGrid(values:number[],width:number,height:number,x:number,y:
 export function accumulationIllustration(samples:number,view=0){
  const data=accumulationExperiment(samples,20,12,view);
  return {data,svg:`<svg viewBox="0 0 500 205" role="img" aria-label="Estimarea unui semnal sintetic la ${samples} samples, comparată cu semnalul cunoscut"><text x="20" y="24">${samples===0?'Istoric gol':samples} ${samples===0?'':samples===1?'sample':'samples'} ${samples===0?'':'/ pixel'}</text><text x="280" y="24">Semnal cunoscut</text>${pixelGrid(data.estimate,20,12,20,44)}${pixelGrid(data.truth,20,12,280,44)}<rect x="120" y="104" width="10" height="10" fill="none" stroke="#ffd091" stroke-width="2"/><rect x="380" y="104" width="10" height="10" fill="none" stroke="#ffd091" stroke-width="2"/><text x="20" y="194" class="experiment-metric">RMSE ${samples?data.rmse.toFixed(3):'—'}</text><text x="280" y="194">N → ∞</text></svg>`};
+}
+export function reflectionIllustration(){
+ const incoming=normalize(sub(route[2],route[1])),theta=Math.acos(Math.min(1,Math.abs(dot(incoming,metalNormal)))),degrees=theta*180/Math.PI;
+ const dx=Math.sin(theta),dy=Math.cos(theta),left=[260-175*dx,210-175*dy],right=[260+175*dx,210-175*dy];
+ return `<svg viewBox="0 0 520 285" role="img" aria-label="Reflexie perfectă la oglindă: unghiul de incidență egal cu unghiul de reflexie, ${degrees.toFixed(1)} grade"><defs><marker id="reflection-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0L6,3L0,6" fill="#ffc576"/></marker></defs><path d="M55 210H465V244H55Z" fill="#8cafa62b"/><path d="M55 210H465" stroke="#b6d2c6" stroke-width="3"/><path d="M260 25V250" stroke="#86e4e2" stroke-dasharray="6 5"/><path d="M${left}L260 210" stroke="#ffc576" stroke-width="4" fill="none" marker-end="url(#reflection-arrow)"/><path d="M260 210L${right}" stroke="#ffc576" stroke-width="4" fill="none" marker-end="url(#reflection-arrow)"/><path d="M260 165A45 45 0 0 0 ${260-45*dx} ${210-45*dy}M260 165A45 45 0 0 1 ${260+45*dx} ${210-45*dy}" stroke="#ffc576" fill="none"/><text x="272" y="38">n</text><text x="180" y="147">θᵢ</text><text x="310" y="147">θᵣ</text><text x="260" y="273" text-anchor="middle">θᵢ = θᵣ = ${degrees.toFixed(1)}°</text></svg>`;
 }
 export function glassIllustration(revealed:boolean){
  const incoming=normalize(sub(route[3],route[2])),angle=(d:Vec3)=>Math.acos(Math.min(1,Math.abs(dot(d,glassNormal))))*180/Math.PI;

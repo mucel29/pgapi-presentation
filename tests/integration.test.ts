@@ -43,12 +43,13 @@ test('canyon bridge and mirror remain visible in full-scene desktop and phone vi
  for(const [w,h] of [[1280,720],[390,844]]){
   const rect=presentationLayout(w,h).scene,aspect=rect.width/rect.height;
   const bridge=cameraAt('bvh',1,aspect).camera;
-  for(const p of court.triangles[court.traversal.triangle]){
-   const target=new T.Vector3(...p);assert.ok(inFrame(target.clone().project(bridge)));
-   const direction=target.clone().sub(bridge.position),distance=direction.length();ray.set(bridge.position,direction.normalize());ray.far=distance+.01;
-   const first=ray.intersectObject(court.world,true)[0];
-   assert.ok(!first||first.object===court.teaching||first.distance>=distance-.02,'the selected bridge triangle is not hidden behind another structure');
-  }
+  // The closest hit of the real segment is the beacon aperture. Its centroid must be visible.
+  const tri=court.triangles[court.traversal.triangle],target=new T.Vector3(...tri[0]).add(new T.Vector3(...tri[1])).add(new T.Vector3(...tri[2])).multiplyScalar(1/3);
+  assert.ok(inFrame(target.clone().project(bridge)));
+  const direction=target.clone().sub(bridge.position),distance=direction.length();ray.set(bridge.position,direction.normalize());ray.far=distance+.01;
+  const first=ray.intersectObject(court.world,true)[0];
+  assert.ok(!first||first.object===court.teaching||first.object===court.lamp||first.distance>=distance-.02,'the closest-hit triangle is not hidden behind another structure');
+  for(const p of court.triangles.slice(0,court.bridgeTriangleCount).filter((_,i)=>i%97===0))assert.ok(inFrame(new T.Vector3(...p[0]).project(bridge)),'the bridge is in frame');
   const material=cameraAt('materials',1,aspect).camera;
   assert.ok(material.position.clone().sub(new T.Vector3(...route[2])).dot(new T.Vector3(...metalNormal))>0);
   assert.ok(inFrame(new T.Vector3(...route[2]).project(material)));

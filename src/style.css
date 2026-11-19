@@ -187,3 +187,62 @@ body.cursor-idle #app,body.cursor-idle #app *{cursor:none!important}
  #code pre{padding:14px;max-height:62dvh}
  #code-content{font-size:13px}
 }
+/* Möller–Trumbore stepper */
+.mt-steps{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px;font:12px/1.35 var(--mono,monospace)}
+.mt-steps li{display:flex;justify-content:space-between;gap:10px;padding:2px 6px;border-left:2px solid transparent;opacity:.45}
+.mt-steps li.done{opacity:.8}.mt-steps li.active{opacity:1;border-left-color:var(--gold,#ffd091);background:#ffd09114}
+.mt-steps li.exit-hit output{color:#8ce3b6}.mt-steps li.exit-miss output{color:#f19489}
+.mt-steps output{color:var(--gold,#ffd091);white-space:nowrap}
+#mt-controls{display:flex;gap:6px;flex-wrap:wrap}
+body.experiment-expanded .mt-steps{font-size:14px}
+/* Temporal accumulation */
+.temporal-views{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+.temporal-views figure{margin:0}
+.temporal-views canvas{width:100%;aspect-ratio:2/1;image-rendering:pixelated;display:block;border:1px solid #476468}
+.temporal-views figcaption{font-size:11px;opacity:.8;margin-top:3px}
+.reset-key{color:#f19489}
+.temporal-modes,.temporal-alpha{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.temporal-modes{margin-bottom:6px}
+.temporal-modes button,.temporal-alpha button{font-size:12px}
+.temporal-modes button[aria-pressed=true],.temporal-alpha button[aria-pressed=true]{border-color:var(--gold,#ffd091)}
+#temporal-panel .lesson-controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+#denoise-panel .lesson-controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+#denoise-panel svg[aria-label^="Pipeline"] text{font-size:19px}
+#denoise-panel svg[aria-label^="Pipeline"] text.tree-small{font-size:15px}
+#mt-controls button,#experiment-controls #mt-controls button{font-size:11px;padding:5px 8px;min-height:32px}
+/* Sampling and stationary temporal accumulation occupy the main image. */
+#image-comparison{position:fixed;inset:145px 24px calc(var(--footer-height) + 14px);z-index:3;display:flex;flex-direction:column;gap:12px;background:#102632f5;padding:16px 20px;border:1px solid #8ba6a470;border-radius:4px}
+.comparison-caption{font:10px/1.5 Mono;color:#bbd7ce;letter-spacing:.06em;text-align:center}
+.comparison-views{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0;align-items:stretch}
+.comparison-views figure{margin:0;min-width:0;min-height:0;display:flex;flex-direction:column;gap:8px}
+.comparison-views figcaption{font:13px/1.5 Mono;text-align:center;color:#dbe6d9;flex:none}
+.comparison-views figcaption b{color:var(--gold);font-size:17px}
+.comparison-views canvas{width:100%;height:100%;min-height:0;object-fit:contain;image-rendering:pixelated;background:#0d2029}
+#comparison-controls{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font:12px/1.4 DejaVu}
+#comparison-controls label{display:flex;align-items:center;gap:9px}
+#comparison-controls input{width:clamp(100px,16vw,240px);accent-color:var(--gold)}
+#comparison-controls label b{min-width:3ch;color:var(--gold);font-family:Mono}
+#comparison-controls .sample-choices{gap:5px}#comparison-controls .sample-choices button{font-size:11px;white-space:nowrap;min-height:33px;padding:5px 9px}
+#comparison-controls>button{font-size:12px;min-height:33px}
+#comparison-state{display:block;text-align:center;font:11px/1.5 Mono;color:#bdd6cb;min-height:17px}
+body.main-comparison #presentation{top:calc(var(--header-height) + 4px);bottom:auto;left:24px;right:24px;width:auto;max-height:70px;border:0;border-radius:0;background:none;box-shadow:none;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:16px}
+body.main-comparison #lesson-scroll{padding:4px 0;overflow:visible}body.main-comparison #section{display:none}
+body.main-comparison h1{font-size:24px;line-height:1.25;margin:0}
+body.main-comparison #lesson-tools{padding:0;border:0;flex:none}body.main-comparison #expand-experiment{display:none!important}
+body.main-comparison #active-figure,body.main-comparison #intro,body.main-comparison #reasoning,body.main-comparison #formula-block{display:none!important}
+body.main-comparison .shade{background:#0b172b44}body.exploring #image-comparison{display:none}
+@media(max-width:759px){
+ #image-comparison{inset:128px 10px calc(var(--footer-height) + 8px);gap:8px;padding:10px}
+ body.main-comparison #presentation{left:12px;right:12px;max-height:58px;gap:7px}body.main-comparison h1{font-size:18px}
+ body.main-comparison #lesson-tools .actions{gap:8px}body.main-comparison #lesson-tools .actions button{font-size:10px}body.main-comparison #replay{display:none}
+ .comparison-caption{font-size:8px}.comparison-views{gap:7px}.comparison-views figcaption{font-size:9px}.comparison-views figcaption b{font-size:12px}
+ #comparison-controls{gap:7px;font-size:10px}#comparison-controls>button{font-size:10px;padding:4px 7px}#comparison-controls .sample-choices button{font-size:9px;padding:4px 6px}#comparison-state{font-size:9px}
+}
+#tree .tree-active{font-size:15px;fill:var(--gold)}#tree g[role=button]:hover circle{stroke:var(--gold);stroke-width:3px}
+#bvh-ray-cases{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}#bvh-ray-cases button{font-size:10px;padding:5px 7px;min-height:30px}#bvh-ray-cases button[aria-pressed=true]{border-color:var(--gold);background:#514530}#bvh-ray-cases #bvh-ray-pick{display:block}
+/* The glass diagram becomes available at the physical entry and stays at exit. */
+body.glass-diagram[data-layout=travel] #presentation{max-height:min(490px,calc(100dvh - var(--header-height) - var(--footer-height) - 32px));pointer-events:auto;opacity:1}
+body.glass-diagram[data-layout=travel] #active-figure,body.glass-diagram[data-layout=travel] #lesson-tools{display:block!important}
+body.glass-diagram #glass-figure svg{max-height:230px}
+body.glass-diagram #intro{display:none}
+body.glass-diagram.experiment-expanded #glass-figure svg{max-height:330px}
