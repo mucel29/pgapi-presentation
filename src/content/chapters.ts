@@ -1292,68 +1292,6 @@ export const beats:Beat[] = [
     "travel": false,
     "captureTime": 1,
     "motion": "hold"
-  },
-  {
-    "id": "denoise-pipeline",
-    "chapter": "denoise",
-    "scene": "courtyard",
-    "camera": [
-      44,
-      7,
-      -14
-    ],
-    "target": [
-      61,
-      6,
-      -24
-    ],
-    "rayFrom": 4.18,
-    "rayTo": 4.18,
-    "visual": "denoise",
-    "seconds": 0,
-    "layout": "technical",
-    "travel": false,
-    "captureTime": 1,
-    "motion": "hold",
-    "title": "Denoising în sisteme reale",
-    "intro": "SVGF, NRD și OIDN combină acumularea temporală, ghidajele din G-buffer și filtrarea spațială."
-  },
-  {
-    "id": "temporal-motion",
-    "chapter": "temporal",
-    "scene": "courtyard",
-    "camera": [
-      44,
-      7,
-      -14
-    ],
-    "target": [
-      61,
-      6,
-      -24
-    ],
-    "rayFrom": 4.18,
-    "rayTo": 4.18,
-    "visual": "noise",
-    "seconds": 2.8,
-    "layout": "technical",
-    "travel": false,
-    "captureTime": 1,
-    "via": [
-      [
-        12,
-        12,
-        -10
-      ],
-      [
-        33,
-        8,
-        -10
-      ]
-    ],
-    "motion": "arrive",
-    "title": "Când scena se mișcă: reproiecție",
-    "intro": "Cubul în mișcare arată când păstrăm istoricul și când îl respingem."
   }
 ];
 

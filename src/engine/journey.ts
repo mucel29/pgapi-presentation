@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {beats,finalView,type Beat} from '../content/chapters';
+import {beats,type Beat} from '../content/chapters';
 import {createRoom} from './room';
 import {createCourtyard} from './courtyard';
 import {JourneyVisuals} from './visuals';
@@ -14,12 +14,14 @@ import {projectedPosition} from '../ui/layout';
 import {monitor,portalLens,portalCut} from '../core/portal';
 import {cameraPixel} from '../core/sampling.ts';
 import {retroRaster,explorerRaster} from '../core/raster';
+import {restoreCaptureCamera,fitCaptureProjection,type CaptureCamera} from '../core/capture-camera';
 
 export class Journey{
  renderer:T.WebGLRenderer;camera=new T.PerspectiveCamera(43,1,.05,1000);room=createRoom();courtyard=createCourtyard();visuals:JourneyVisuals;
  pendingSettings:Partial<RenderSettings>={};controls:OrbitControls;finale:Finale|null=null;exploring=false;pathTracing=false;paused=false;preparedVisible=false;supported:boolean;index=0;fps=0;elapsed=0;transition=1;
  private sceneViewport={left:0,top:0,width:1,height:1};private keys=new Set<string>();private previous=0;private active=true;private from=new T.Vector3();private fromTarget=new T.Vector3();private target=new T.Vector3();private portalFrom:[number,number,number]=[...portalStart];private monitorPosition:[number,number,number]=[...portalStart];
  private tracingRequests=new RequestGeneration();private drawKey='';private portalAspect=-1;private portalFrame=-1;private portalCamera=new T.PerspectiveCamera(43,1.66/1.06,.05,400);private portalTarget=new T.WebGLRenderTarget(480,306);
+ private captureCamera:CaptureCamera|null=null;
  private transitionFrom:Beat|null=null;private transitionShot:Beat|null=null;
  private rasterTarget=new T.WebGLRenderTarget(480,270,{minFilter:T.NearestFilter,magFilter:T.NearestFilter});
  private rasterQuad=new T.Scene();private rasterCamera=new T.OrthographicCamera(-1,1,1,-1,0,1);
@@ -49,7 +51,7 @@ export class Journey{
  get guideLabels(){return this.visuals.guideAnchors.map(({point,...label})=>({...label,...this.projectPoint(point)}));}
  get graphicsStatus(){return this.supported?'raster':'raster-only';}
  get rayWeight(){return weightDisplay(throughput[Math.min(4,Math.max(0,Math.floor(this.visuals.progress)))]);}
- resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=this.exploring?explorerRaster(width,height,this.pendingSettings.scale??1):{width:Math.round(width),height:Math.round(height)};this.renderer.setSize(size.width,size.height,false);const raster=retroRaster(width,height);this.rasterTarget.setSize(raster.width,raster.height);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.rasterTarget.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
+ resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;if(this.exploring&&this.captureCamera)fitCaptureProjection(this.camera,this.captureCamera,width/height);this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=this.exploring?explorerRaster(width,height,this.pendingSettings.scale??1):{width:Math.round(width),height:Math.round(height)};this.renderer.setSize(size.width,size.height,false);const raster=retroRaster(width,height);this.rasterTarget.setSize(raster.width,raster.height);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.rasterTarget.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
  setBeat(index:number,immediate=false,replay=false){
   const currentPosition=this.camera.position.toArray() as Vec3,currentTarget=this.target.toArray() as Vec3;
   this.invalidateRaster();this.portalFrame=-1;this.index=Math.max(0,Math.min(beats.length-1,index));const b=this.beat,previous=beats[Math.max(0,this.index-1)];this.elapsed=0;this.transition=immediate?1:0;
@@ -61,11 +63,11 @@ export class Journey{
   this.transitionShot=!this.visuals.accelerationActive&& !['bvh','aabb','traversal'].includes(b.id)&&!immediate&&!replay&&b.motion==='hold'&&this.camera.position.distanceTo(new T.Vector3(...destination.position))>1?{...b,motion:'arrive',seconds:2}:b;
   this.from.set(...this.transitionFrom.camera);this.fromTarget.set(...this.transitionFrom.target);
   if(b.scene==='portal'&&!replay)this.portalFrom=immediate?[...portalStart]:[...this.monitorPosition];
-  this.visuals.root.visible=!['image','loop','noise','temporal','denoise','denoise-pipeline','temporal-motion'].includes(b.id);
+  this.visuals.root.visible=!['image','loop','noise','temporal','denoise'].includes(b.id);
   this.visuals.apply(b);if(immediate||this.transitionShot.seconds===0||matchMedia('(prefers-reduced-motion: reduce)').matches)this.finish();else this.updateTransition(0);
  }
  finish(){const b=this.beat;this.transition=1;this.elapsed=b.travel?b.seconds:0;this.updateTransition(1);this.visuals.update(this.elapsed,b.rayTo);this.visuals.fitHead(this.camera,this.rasterTarget.height);this.invalidateRaster();}
- async exploreRaster(){this.exploring=true;this.camera.clearViewOffset();this.visuals.root.visible=false;this.courtyard.setBeauty(true);this.camera.position.set(...finalView.camera);this.controls.target.set(...finalView.target);this.controls.enabled=true;this.controls.update();this.renderer.shadowMap.needsUpdate=true;this.resize();}
+ async exploreRaster(pose:CaptureCamera){this.captureCamera=pose;this.exploring=true;this.visuals.root.visible=false;this.courtyard.setBeauty(true);this.controls.enabled=true;this.resetView();this.renderer.shadowMap.needsUpdate=true;this.resize();}
  async startTracing(){
   const isCurrent=this.tracingRequests.begin(),active=()=>isCurrent()&&this.exploring;
   if(!active())return false;
@@ -80,9 +82,9 @@ export class Journey{
  }
  stopTracing(){this.tracingRequests.invalidate();this.pathTracing=false;this.visuals.rasterOnly.visible=this.supported;this.finale?.stop();this.courtyard.setBeauty(true);this.resize();}
  setSettings(patch:Partial<RenderSettings>){Object.assign(this.pendingSettings,patch);this.finale?.setSettings(patch);if(patch.scale!==undefined&&this.exploring&&!this.pathTracing)this.resize();}
- returnToJourney(){this.stopTracing();this.exploring=false;this.controls.enabled=false;this.keys.clear();this.courtyard.setBeauty(false);this.visuals.root.visible=true;this.resize();this.setBeat(this.index,true);}
+ returnToJourney(){this.stopTracing();this.exploring=false;this.camera.fov=43;this.controls.enabled=false;this.keys.clear();this.courtyard.setBeauty(false);this.visuals.root.visible=true;this.resize();this.setBeat(this.index,true);}
  pickBVH(clientX:number,clientY:number){const rect=this.canvas.getBoundingClientRect(),raycaster=new T.Raycaster();raycaster.setFromCamera(new T.Vector2((clientX-rect.left)/rect.width*2-1,1-(clientY-rect.top)/rect.height*2),this.camera);const hit=raycaster.intersectObject(this.visuals.accelerationModel,false)[0];if(!hit)return false;this.visuals.setRay(this.camera.position.toArray(),hit.point.clone().sub(this.camera.position).normalize().toArray());this.invalidateRaster();return true;}
- resetView(){this.camera.position.set(...finalView.camera);this.controls.target.set(...finalView.target);this.controls.update();this.finale?.invalidate();}
+ resetView(){if(!this.captureCamera)return;restoreCaptureCamera(this.camera,this.controls,this.captureCamera);const rect=this.canvas.getBoundingClientRect();fitCaptureProjection(this.camera,this.captureCamera,rect.width/Math.max(1,rect.height));this.finale?.invalidate();this.invalidateRaster();}
  private renderPortal(){
   const b=this.beat,aspect=this.camera.aspect,frame=Math.floor(this.elapsed*16);if(frame===this.portalFrame&&Math.abs(aspect-this.portalAspect)<1e-6)return;
   this.portalFrame=frame;this.portalAspect=aspect;this.portalCamera.fov=portalLens(aspect).textureFov;this.portalCamera.updateProjectionMatrix();

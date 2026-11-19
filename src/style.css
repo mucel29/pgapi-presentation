@@ -264,3 +264,38 @@ body.exploring #pipeline-stage{display:none}
 /* The spoken explanation stays with the presenter. */
 #intro,#reasoning,#formula-block,.experiment-note,.lesson-caption{display:none!important}
 #algorithm-status:empty{display:none}
+
+/* Shader tokens preserve source whitespace and native selection/copy. */
+#code pre{overflow-wrap:normal;word-break:normal}
+#code-content,#inline-content{color:#edf2e6;tab-size:2}
+.syntax-comment{color:#a4bab5;font-style:italic}
+.syntax-keyword{color:#f8b4d9}
+.syntax-type{color:#83dfd2}
+.syntax-builtin{color:#a3cfff}
+.syntax-number{color:#ffd091}
+.syntax-string{color:#c1e39a}
+.syntax-preprocessor{color:#d0b8ff}
+
+/* Diagram typography belongs to its own viewBox, independent of other SVGs. */
+:is(#pipeline-stage,#notes) svg.denoise-pipeline{display:block;width:100%;height:auto;max-height:60dvh;flex-shrink:0}
+:is(#pipeline-stage,#notes) svg.denoise-pipeline.pipeline-portrait{display:none}
+:is(#pipeline-stage,#notes) svg.denoise-pipeline text.pipeline-title{font:14px Mono,monospace;fill:#edf2e6}
+:is(#pipeline-stage,#notes) svg.denoise-pipeline text.pipeline-subtitle{font:12px Mono,monospace;fill:#d1e4da}
+@media(max-width:759px){
+ :is(#pipeline-stage,#notes) svg.denoise-pipeline.pipeline-wide{display:none}
+ :is(#pipeline-stage,#notes) svg.denoise-pipeline.pipeline-portrait{display:block;max-height:none}
+ :is(#pipeline-stage,#notes) svg.denoise-pipeline.pipeline-portrait text.pipeline-title{font-size:16px}
+ :is(#pipeline-stage,#notes) svg.denoise-pipeline.pipeline-portrait text.pipeline-subtitle{font-size:14px}
+}
+
+/* Compact schematic signals sit above the comparison controls, away from the wipe handle. */
+#signal-mini{position:absolute;z-index:1;left:24px;bottom:calc(var(--footer-height) + 115px);width:220px;max-width:28vw;pointer-events:none;filter:drop-shadow(0 1px 3px #07141c)}
+#signal-mini:empty{display:none}#signal-mini svg{width:100%;height:auto;overflow:visible}
+#signal-mini svg text{font:10px Mono;fill:#f3eddb}#signal-mini .signal-axis{stroke:#e1e9db66;fill:none}#signal-mini .signal-raw{stroke:#a6d8d3a6;stroke-width:1.3;fill:none}#signal-mini .signal-result{stroke:#ffd091;stroke-width:2;fill:none}#signal-mini svg .signal-key{fill:#a6d8d3}#signal-mini svg .signal-current{fill:#ffd091}
+body.main-comparison #explore{width:auto;min-height:30px;padding:5px 10px;font-size:12px;margin:5px 0 0 auto}
+#notes #pipeline-stage{position:static;inset:auto;display:block;padding:0;margin:0 0 22px;background:none;border:0;border-radius:0}
+#notes:has(#pipeline-stage:not(.hidden)){width:min(1500px,96vw)}#notes #pipeline-stage svg{max-height:none}#notes .pipeline-legend{margin-top:12px}
+@media(max-width:759px){#signal-mini{left:12px;bottom:calc(var(--footer-height) + 129px);width:170px;max-width:40vw}body.main-comparison #explore{font-size:10px;padding:4px 7px;min-height:27px}}
+@media(max-height:480px){#signal-mini{width:150px;bottom:calc(var(--footer-height) + 90px)}}
+
+#comparison-divider{z-index:2}

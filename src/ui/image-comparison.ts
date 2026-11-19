@@ -1,4 +1,5 @@
 import {rng} from '../core/math.ts';
+import type {CaptureCamera} from '../core/capture-camera';
 
 /** A repeatable illustration of averaging independent noise, not path tracing. */
 export class NoiseAverage {
@@ -22,6 +23,7 @@ export class NoiseAverage {
 export interface CaptureManifest {
  width:number;height:number;samples:{spp:number;url:string}[];
  denoise:{spp:number;raw:string;guided:string[]};
+ camera:CaptureCamera;
 }
 
 /** Prepared integrator captures share one camera and one full-frame image rectangle. */

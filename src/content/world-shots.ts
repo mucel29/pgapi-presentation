@@ -41,7 +41,7 @@ const shots:Record<string,Partial<Beat>>={
  aabb:{...bridgeView},traversal:{...bridgeView},
  'to-light':{...beaconView,motion:'beacon',seconds:8,rayFrom:4.18,rayTo:5,via:[add(probeClearance.point,[-5,3.5,6])],aimVia:[probeClearance.point]},
  light:{...beaconView,seconds:0,motion:'hold',via:[],aimVia:[]},
- image:{...imageHold},samples:{...originView,seconds:0,motion:'hold',via:[],aimVia:[],rayFrom:5,rayTo:5},loop:{...imageHold},noise:{...imageHold},temporal:{...imageHold},'temporal-motion':{...imageHold},denoise:{...imageHold},'denoise-pipeline':{...imageHold},
+ image:{...imageHold},samples:{...originView,seconds:0,motion:'hold',via:[],aimVia:[],rayFrom:5,rayTo:5},loop:{...imageHold},noise:{...imageHold},temporal:{...imageHold},denoise:{...imageHold},
 };
 export function applyObservatoryShots(beats:Beat[]){for(const beat of beats){if(beat.id==='room')continue;Object.assign(beat,shots[beat.id]??{});if(['bvh','aabb','traversal'].includes(beat.id)){beat.motion='hold';beat.seconds=0;beat.rayFrom=5;beat.rayTo=5;}}}
-export const observatoryFinalView={camera:[94,62,-59] as Vec3,target:[...route[5]] as Vec3};
+export const observatoryFinalView={camera:[...imageView.camera] as Vec3,target:[...imageView.target] as Vec3};

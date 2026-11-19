@@ -58,16 +58,26 @@ export function denoiseStepSvg(pass:number,guided=true){
 }
 /** SVGF-style pipeline. NRD and OIDN are listed below it as variants. */
 export function denoisePipelineSvg(){
- const box=(x:number,y:number,w:number,title:string,sub:string,color='#244f51')=>`<rect x="${x}" y="${y}" width="${w}" height="58" rx="4" fill="${color}" stroke="#8bc5c1"/><text x="${x+w/2}" y="${y+25}" text-anchor="middle">${title}</text><text x="${x+w/2}" y="${y+46}" text-anchor="middle" class="tree-small">${sub}</text>`;
- const arrow=(x1:number,x2:number,y:number)=>`<path d="M${x1} ${y}H${x2}" stroke="#ffd091" stroke-width="2" marker-end="url(#pipe-arrow)"/>`;
- return `<svg viewBox="0 0 664 190" role="img" aria-label="Pipeline de denoising: path tracer, acumulare temporală, varianță, à-trous"><defs><marker id="pipe-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#ffd091"/></marker></defs>
- ${box(4,30,118,'Path tracer','1 spp / cadru','#3a2f22')}${arrow(122,140,59)}
- ${box(142,30,150,'Temporal','reproiecție')}${arrow(292,310,59)}
- ${box(312,30,120,'Varianță','per pixel')}${arrow(432,450,59)}
- ${box(452,30,120,'À-trous ×5','pas 1…16')}${arrow(572,590,59)}
- <rect x="592" y="30" width="68" height="58" rx="4" fill="#4f8273" stroke="#8bc5c1"/><text x="626" y="64" text-anchor="middle" class="tree-small">ieșire</text>
- <rect x="142" y="130" width="430" height="52" rx="4" fill="#16333b" stroke="#476468" stroke-dasharray="4 4"/><text x="357" y="152" text-anchor="middle">G-buffer</text><text x="357" y="173" text-anchor="middle" class="tree-small">normală · adâncime · albedo · mișcare</text>
- <path d="M217 130V90M372 130V90M512 130V90" stroke="#8bc5c1" stroke-dasharray="3 4"/></svg>`;
+ const box=(x:number,y:number,w:number,title:string,sub:string,color='#244f51',height=64)=>`<rect x="${x}" y="${y}" width="${w}" height="${height}" rx="6" fill="${color}" stroke="#8bc5c1"/><text x="${x+w/2}" y="${y+27}" text-anchor="middle" class="pipeline-title">${title}</text><text x="${x+w/2}" y="${y+48}" text-anchor="middle" class="pipeline-subtitle">${sub}</text>`;
+ const defs=(id:string)=>`<defs><marker id="${id}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#ffd091"/></marker></defs>`;
+ const arrow=(path:string,id:string)=>`<path d="${path}" fill="none" stroke="#ffd091" stroke-width="2" marker-end="url(#${id})"/>`;
+ const label='Pipeline de denoising: path tracer, acumulare temporală, varianță, à-trous';
+ return `<svg class="denoise-pipeline pipeline-wide" viewBox="0 0 820 248" role="img" aria-label="${label}">${defs('pipe-arrow-wide')}
+ ${box(24,28,140,'Path tracer','1 spp / cadru','#3a2f22')}${arrow('M164 60H184','pipe-arrow-wide')}
+ ${box(188,28,140,'Temporal','reproiecție')}${arrow('M328 60H348','pipe-arrow-wide')}
+ ${box(352,28,140,'Varianță','per pixel')}${arrow('M492 60H512','pipe-arrow-wide')}
+ ${box(516,28,140,'À-trous ×5','pas 1…16')}${arrow('M656 60H676','pipe-arrow-wide')}
+ ${box(680,28,116,'Ieșire','imagine','#4f8273')}
+ <rect x="188" y="152" width="468" height="68" rx="6" fill="#16333b" stroke="#62827f" stroke-dasharray="4 4"/><text x="422" y="180" text-anchor="middle" class="pipeline-title">G-buffer</text><text x="422" y="203" text-anchor="middle" class="pipeline-subtitle">normală · adâncime · albedo · mișcare</text>
+ <path d="M258 152V96M422 152V96M586 152V96" stroke="#8bc5c1" stroke-dasharray="3 4"/></svg>
+ <svg class="denoise-pipeline pipeline-portrait" viewBox="0 0 444 480" role="img" aria-label="${label}">${defs('pipe-arrow-portrait')}
+ ${box(24,20,210,'Path tracer','1 spp / cadru','#3a2f22')}${arrow('M129 84V108','pipe-arrow-portrait')}
+ ${box(24,112,210,'Temporal','reproiecție')}${arrow('M129 176V200','pipe-arrow-portrait')}
+ ${box(24,204,210,'Varianță','per pixel')}${arrow('M129 268V292','pipe-arrow-portrait')}
+ ${box(24,296,210,'À-trous ×5','pas 1…16')}${arrow('M129 360V384','pipe-arrow-portrait')}
+ ${box(24,388,210,'Ieșire','imagine','#4f8273')}
+ <rect x="270" y="112" width="150" height="248" rx="6" fill="#16333b" stroke="#62827f" stroke-dasharray="4 4"/><text x="345" y="160" text-anchor="middle" class="pipeline-title">G-buffer</text><text x="345" y="205" text-anchor="middle" class="pipeline-subtitle">normală</text><text x="345" y="238" text-anchor="middle" class="pipeline-subtitle">adâncime</text><text x="345" y="271" text-anchor="middle" class="pipeline-subtitle">albedo</text><text x="345" y="304" text-anchor="middle" class="pipeline-subtitle">mișcare</text>
+ <path d="M234 144H270M234 236H270M234 328H270" stroke="#8bc5c1" stroke-dasharray="3 4"/></svg>`;
 }
 
 /** Enlarges the existing guided synthetic experiment, with identical raw input in both views. */
