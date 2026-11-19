@@ -1,0 +1,15 @@
+Snapshot: 2026-11-18T23:43:55+02:00
+Base commit: 10b67db393c6d440ca387487607c55856613a867
+
+Working tree status when packaged:
+ M output/raytracing.pptx
+?? output/Ray-Tracing-Capturi-Demo.pptx
+?? output/Ray-Tracing-Diagrame-backup.pptx
+?? output/Ray-Tracing-FullHD-preview.png
+?? output/Ray-Tracing-Prezentare.pptx
+?? output/raytracingv1.pptx
+?? scripts/build-screenshot-deck.mjs
+?? scripts/build-upload-deck.mjs
+
+All selected working-tree files, including uncommitted changes, are copied byte-for-byte.
+The .git directory and history are intentionally excluded.
