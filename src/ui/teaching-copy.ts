@@ -9,9 +9,9 @@ export const teachingCopy:Record<string,{text:string;formula?:string}>={
  bvh:{text:'Stanford Bunny: 948 de triunghiuri. Ierarhia completă este discretă; doar cutia testată acum este accentuată. O frunză conține câteva triunghiuri.',formula:'C = 1 + (Sₗ/S)Nₗ + (Sᵣ/S)Nᵣ'},
  aabb:{text:'Aceeași rază o + t·d intersectează cele trei perechi de plane ale cutiei rădăcină.',formula:'tNear = max(tX−, tY−, tZ−, 0)\ntFar = min(tX+, tY+, tZ+)'},
  traversal:{text:'Auriu: cutia activă. Roz: triunghiul lovit. Raza traseului ratează iepurele; „Lovește modelul” arată un hit real.'},
- noise:{text:'Fiecare update adaugă un sample nou la media pixelului. Eroarea scade lent.',formula:'eroare standard ∝ 1/√N'},
- temporal:{text:'Camera fixă: fiecare cadru adaugă o estimare nouă. Următorul pas arată separat reproiecția pentru un cub în mișcare.',formula:'Cₙ = Cₙ₋₁ + (Sₙ − Cₙ₋₁)/n'},
- denoise:{text:'Pixelul marcat este lângă muchie. Cercurile arată ponderea fiecărui vecin la pasul curent.',formula:'w = kernel · wNormal · wDepth · wAlbedo · wLuminance'},
+ noise:{text:'',formula:'eroare standard ∝ 1/√N'},
+ temporal:{text:'',formula:'Cₙ = Cₙ₋₁ + (Sₙ − Cₙ₋₁)/n'},
+ denoise:{text:'',formula:'w = kernel · wNormal · wDepth · wAlbedo · wLuminance'},
  light:{text:'Contribuția traseului intră în pixelul q. Valorile RGB sunt liniare.'}
 };
 export const sourceTitles:Record<string,string>={

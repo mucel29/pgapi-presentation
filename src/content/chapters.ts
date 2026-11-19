@@ -526,8 +526,8 @@ export const chapters:Chapter[] = [
     "formula": "Cₙ = Cₙ₋₁ + (Sₙ − Cₙ₋₁) / n",
     "formulaNote": "Media rulantă a unui pixel",
     "code": "vec3 sample = tracePath(ray);\nvec3 previous = texelFetch(history, pixel, 0).rgb;\nvec3 average = previous + (sample - previous) / sampleCount;\n// Camera / lumină / material / rezoluție schimbată?\n// sampleCount = 1; history se reconstruiește.",
-    "codeLabel": "Acumulare cu camera fixă",
-    "notes": "Zgomot simulat didactic peste captura raster a scenei; SPP controlează scara zgomotului, aproximativ 1/√N.",
+    "codeLabel": "Acumulare cu camera fixă · schemă",
+    "notes": "",
     "camera": [
       -8,
       18,
@@ -570,8 +570,8 @@ export const chapters:Chapter[] = [
     "formula": "Cₙ = Cₙ₋₁ + (Sₙ − Cₙ₋₁) / n",
     "formulaNote": "Demonstrație didactică de mediere la cameră fixă.",
     "code": "vec2 prevUV = uv - motion(uv);\nvec4 hist = texture(history, prevUV);\nbool valid = inside(prevUV)\n  && abs(depth(uv) - hist.depth) < eps\n  && dot(normal(uv), hist.normal) > 0.9;\nfloat n = valid ? hist.count + 1.0 : 1.0;\nfloat a = max(1.0 / n, alphaMin);\nvec3 c = mix(valid ? hist.rgb : sample, sample, a);",
-    "codeLabel": "GLSL · acumulare temporală",
-    "notes": "Imaginea principală arată media unor estimări zgomotoase independente peste captura raster. Acumularea fixă nu cere reproiecție. Următorul pas păstrează demonstrația colegului cu mișcare, reproiecție și respingerea istoricului.",
+    "codeLabel": "GLSL · reproiecție (schemă)",
+    "notes": "Acumularea fixă nu cere reproiecție.",
     "camera": [
       -8,
       18,
@@ -619,7 +619,7 @@ export const chapters:Chapter[] = [
     "formulaNote": "Filtrul scrie într-o imagine separată. Acumularea rămâne neatinsă.",
     "code": "float wn = pow(max(dot(n0, nq), 0.0), 32.0);\nfloat wz = exp(-abs(z0-zq) / depthScale);\nfloat wa = exp(-length(a0-aq) * 8.0);\nfloat wl = exp(-abs(luma(c0)-luma(cq)) / colorScale);\nfloat weight = kernel * wn * wz * wa * wl;\nsum += weight * cq;\nweightSum += weight;\n// Ping-pong separat; acumularea brută rămâne intactă.",
     "codeLabel": "GLSL · filtrul à-trous din proiect",
-    "notes": "Pasul 1 (filtrul à-trous). După acumulare rămâne zgomot. Un blur simplu ar netezi zgomotul, dar ar amesteca suprafețele de pe cele două părți ale muchiei. Filtrul ghidat calculează o pondere pentru fiecare vecin. Normala, adâncimea și albedo-ul vin din G-buffer și nu au zgomot. Un vecin de pe altă suprafață primește pondere aproape zero.\n\nApasă „Pas →”. Pasul 1 folosește vecinii imediați. Pasul 2 și pasul 4 sar peste pixeli: același kernel 5×5 acoperă o zonă mai mare. Așa obținem un filtru larg cu doar 25 de citiri pe pixel. Cercurile arată ponderea fiecărui vecin pentru pixelul marcat. Comută „Fără ghidaje”: cercurile trec peste muchie și muchia se estompează.\n\nPasul 2 (sisteme reale). SVGF pune totul împreună: acumulare temporală cu reproiecție, varianța fiecărui pixel, apoi 5 treceri à-trous. Varianța decide cât filtrăm: pixelii cu mult istoric primesc mai puțin blur. NRD (NVIDIA) aplică aceleași idei separat pentru difuz și specular. OIDN (Intel) și DLSS Ray Reconstruction folosesc rețele neuronale.\n\nDenoising-ul nu adaugă lumină lipsă. Dacă niciun traseu nu a găsit o sursă, filtrul nu o poate inventa.",
+    "notes": "Pasul 1 (filtrul à-trous). După acumulare rămâne zgomot. Un blur simplu ar netezi zgomotul, dar ar amesteca suprafețele de pe cele două părți ale muchiei. Filtrul ghidat calculează o pondere pentru fiecare vecin. Normala, adâncimea și albedo-ul vin din G-buffer și nu au zgomot. Un vecin de pe altă suprafață primește pondere aproape zero.\n\nPasul 2 (sisteme reale). SVGF pune totul împreună: acumulare temporală cu reproiecție, varianța fiecărui pixel, apoi 5 treceri à-trous. Varianța decide cât filtrăm: pixelii cu mult istoric primesc mai puțin blur. NRD (NVIDIA) aplică aceleași idei separat pentru difuz și specular. OIDN (Intel) și DLSS Ray Reconstruction folosesc rețele neuronale.\n\nDenoising-ul nu adaugă lumină lipsă. Dacă niciun traseu nu a găsit o sursă, filtrul nu o poate inventa.",
     "camera": [
       -8,
       18,
@@ -1160,7 +1160,7 @@ export const beats:Beat[] = [
       -5
     ],
     "title": "Imaginea inițială · 1 spp",
-    "intro": "Simulare de zgomot peste imaginea raster a camerei inițiale.",
+    "intro": "",
     "aimVia": []
   },
   {
