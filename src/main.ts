@@ -8,12 +8,12 @@ import {TemporalDemo,temporalModes,temporalModeNote,type TemporalMode} from './u
 import {glassIllustration,reflectionIllustration,slabIllustration} from './ui/experiments';
 import {presentationLayout,type PresentationMode} from './ui/layout';
 import {ModalPause,traversalSummary,graphicsFeedback,routeHash} from './ui/session-state';
-import {drawDenoiseComparison,denoisePipelineSvg} from './ui/denoise-demo';
+import {denoisePipelineSvg} from './ui/denoise-demo';
 import {teachingCopy,sourceTitles} from './ui/teaching-copy';
 import {selectedPathEstimate,loopStageState} from './core/lesson-state';
 import {materialThroughput,metalReflectance} from './core/transport';
 import {cameraPixel,illustratedSamples} from './core/sampling';
-import {exampleCount,loopLessonDiagram,loopOperations,loopShortNotes,loopLabels,rgbText,rgbSwatch} from './ui/path-lesson';
+import {exampleCount,loopLessonDiagram,loopOperations,loopLabels,rgbText,rgbSwatch} from './ui/path-lesson';
 const $=<E extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as E;
 const escape=(s:string)=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const arrow='<svg viewBox="0 0 24 24" fill="none"><path d="M4 12h15m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.5"/></svg>';
@@ -59,14 +59,24 @@ document.body.dataset.tracing='off';
 let journey:Journey|null=null;let graphicsAvailable=false;try{journey=new Journey($<HTMLCanvasElement>('scene'));graphicsAvailable=true;}catch(e){console.error(e);$('render-status').textContent=graphicsFeedback(false);$('graphics-fallback').classList.remove('hidden');$<HTMLButtonElement>('explore').disabled=true;$('explore').textContent='Explorare 3D indisponibilă';}
 const params=new URLSearchParams(location.search),capture=params.get('capture'),capturePhase=params.get('phase');const aliases:Record<string,string>={gpu:'room',accumulation:'noise',modern:'denoise',approach:'portal',launch:'hit',inflight:'hit'};
 function routeIndex(){const p=new URLSearchParams(location.hash.slice(1)),id=aliases[p.get('chapter')??'']??p.get('chapter')??'room',bid=aliases[p.get('beat')??'']??p.get('beat');return Math.max(0,beats.findIndex(b=>bid?b.id===bid:b.id===id));}
-let index=routeIndex(),exploring=false,lastUi=0,treeSignature='',toastTimer=0,triangleU=primaryUV.u,triangleV=primaryUV.v,triangleParallel=false,flowIndex=0,flowPlaying=false,lastFlow=0,picking=false,noiseSamples=1,noisePlaying=false,lastNoise=0,budgetPaths=2,budgetBounces=3,samplesPlaying=false,lastSample=0,tracingUiRequest=0,denoiseGuided=true,denoisePass=0,denoiseStrength=.8,denoisePlaying=false,lastDenoise=0,mtStep=0,temporalPlaying=false,lastTemporal=0;
+let index=routeIndex(),exploring=false,lastUi=0,treeSignature='',toastTimer=0,triangleU=primaryUV.u,triangleV=primaryUV.v,triangleParallel=false,flowIndex=0,flowPlaying=false,lastFlow=0,picking=false,noiseSamples=1,noisePlaying=false,lastNoise=0,budgetPaths=2,budgetBounces=3,samplesPlaying=false,lastSample=0,tracingUiRequest=0,denoisePass=0,denoisePlaying=false,lastDenoise=0,mtStep=0,temporalPlaying=false,lastTemporal=0;
 const temporal=new TemporalDemo();
 const comparisonStage=document.createElement('section');comparisonStage.id='image-comparison';comparisonStage.className='hidden';comparisonStage.setAttribute('aria-label','Comparație pe imaginea principală');
-comparisonStage.innerHTML=`<div class="comparison-caption">CAMERA INIȚIALĂ · SIMULARE ZGOMOT PE IMAGINE RASTER</div><div class="comparison-views"><figure><figcaption id="comparison-low-label">Referință fixă · <b>1 spp</b></figcaption><canvas id="comparison-low" aria-label="Aceeași imagine cu zgomot simulat la un sample"></canvas></figure><figure><figcaption id="comparison-label"></figcaption><canvas id="comparison-high" aria-label="Aceeași imagine cu zgomot simulat mediat"></canvas></figure></div><div id="comparison-controls"></div><output id="comparison-state" aria-live="polite"></output>`;
+comparisonStage.innerHTML=`<div class="comparison-views"><img id="comparison-low" alt="Cadru de referință la 1 sample pe pixel"/><img id="comparison-high" alt="Același cadru la bugetul ales"/><div class="comparison-labels"><span id="comparison-low-label">1 spp</span><span id="comparison-label"></span></div><div id="comparison-divider" role="slider" tabindex="0" aria-label="Separator comparație" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-orientation="horizontal"><span>↔</span></div></div><div id="comparison-controls"></div><output id="comparison-state" aria-live="polite"></output>`;
 $('app').append(comparisonStage);
 const pipelineStage=document.createElement('section');pipelineStage.id='pipeline-stage';pipelineStage.className='hidden';pipelineStage.innerHTML=denoisePipelineSvg()+'<div class="pipeline-legend"><span>SVGF · lanțul de mai sus</span><span>NRD · difuz / specular separat</span><span>OIDN · filtru neuronal</span></div>';$('app').append(pipelineStage);
-const comparison=new ImageComparison($<HTMLCanvasElement>('comparison-low'),$<HTMLCanvasElement>('comparison-high'));
-let comparisonCapture=0,temporalSamples=1,temporalCamera=0;
+const comparison=new ImageComparison($<HTMLImageElement>('comparison-low'),$<HTMLImageElement>('comparison-high'),comparisonStage);
+let temporalSamples=1;
+const showCapture=(request:Promise<void>)=>void request.then(()=>journey?.setPreparedVisible(comparisonPhase()&&!exploring)).catch(()=>{$('comparison-state').textContent='Capturi indisponibile';});
+void comparison.ready.then(()=>{if(comparisonPhase())renderPrepared();}).catch(()=>{$('comparison-state').textContent='Capturi indisponibile';});
+const divider=$('comparison-divider');let split=50;
+function setSplit(value:number){split=Math.max(0,Math.min(100,value));comparisonStage.style.setProperty('--split',`${split}%`);divider.setAttribute('aria-valuenow',String(Math.round(split)));}
+function dragSplit(event:PointerEvent){const rect=comparisonStage.getBoundingClientRect();setSplit((event.clientX-rect.left)/rect.width*100);}
+divider.onpointerdown=event=>{if(event.button!==0)return;event.stopPropagation();divider.setPointerCapture(event.pointerId);dragSplit(event);};
+divider.onpointermove=event=>{if(divider.hasPointerCapture(event.pointerId))dragSplit(event);};
+divider.onpointerup=event=>{if(divider.hasPointerCapture(event.pointerId))divider.releasePointerCapture(event.pointerId);};
+divider.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();event.stopPropagation();setSplit(event.key==='Home'?0:event.key==='End'?100:split+(event.key==='ArrowLeft'?-2:2));};
+setSplit(50);
 const current=()=>beats[index],chapter=()=>chapters.find(c=>c.id===current().chapter)!;
 const imagePhase=()=>['image','samples','noise','temporal','temporal-motion','denoise','denoise-pipeline'].includes(current().id);
 const comparisonPhase=()=>['image','noise','temporal','denoise'].includes(current().id);
@@ -94,7 +104,7 @@ function renderLessonCopy(expanded=false){
 }
 function render(settled=false){
  picking=false;document.body.classList.remove('picking');
- const b=current(),c=chapter(),n=chapters.indexOf(c);document.body.dataset.layout=b.layout;document.body.classList.toggle('has-path-lesson',['samples','light'].includes(c.id)&&!b.travel&&b.id!=='image');samplesPlaying=false;noisePlaying=false;temporalPlaying=false;denoisePlaying=false;document.body.dataset.beat=b.id;document.body.classList.toggle('image-phase',imagePhase());$('image-frame').classList.add('hidden');document.body.classList.toggle('main-comparison',comparisonPhase());document.body.classList.toggle('initial-image',b.id==='image');document.body.classList.toggle('diagram-stage',b.id==='denoise-pipeline');comparisonStage.classList.toggle('hidden',!comparisonPhase());pipelineStage.classList.toggle('hidden',b.id!=='denoise-pipeline');comparisonStage.querySelector<HTMLElement>('.comparison-caption')!.textContent=b.id==='denoise'?'SEMNAL SINTETIC · GHIDAJE: NORMALĂ / ADÂNCIME / ALBEDO':b.id==='image'?'Simulare · 1 spp':'CAMERA INIȚIALĂ · SIMULARE ZGOMOT PE IMAGINE RASTER';$('comparison-low-label').innerHTML=b.id==='denoise'?'Intrare zgomotoasă · <b>1 spp</b>':'Referință fixă · <b>1 spp</b>';comparisonCapture++;document.body.dataset.chapter=c.id;document.body.classList.toggle('has-experiment',['bvh','aabb','traversal','hit','loop','materials','samples','noise','temporal','denoise','light'].includes(c.id)&&!b.travel);document.body.classList.toggle('is-room',b.scene==='room');
+ const b=current(),c=chapter(),n=chapters.indexOf(c);document.body.dataset.layout=b.layout;document.body.classList.toggle('has-path-lesson',['samples','light'].includes(c.id)&&!b.travel&&b.id!=='image');samplesPlaying=false;noisePlaying=false;temporalPlaying=false;denoisePlaying=false;document.body.dataset.beat=b.id;document.body.classList.toggle('image-phase',imagePhase());$('image-frame').classList.add('hidden');document.body.classList.toggle('main-comparison',comparisonPhase());document.body.classList.toggle('initial-image',b.id==='image');document.body.classList.toggle('diagram-stage',b.id==='denoise-pipeline');comparisonStage.classList.toggle('hidden',!comparisonPhase());pipelineStage.classList.toggle('hidden',b.id!=='denoise-pipeline');journey?.setPreparedVisible(comparisonPhase()&&comparisonStage.dataset.ready==='true');document.body.dataset.chapter=c.id;document.body.classList.toggle('has-experiment',['bvh','aabb','traversal','hit','loop','materials','samples','noise','temporal','denoise','light'].includes(c.id)&&!b.travel);document.body.classList.toggle('is-room',b.scene==='room');
  $('section').textContent=`${String(n+1).padStart(2,'0')} / ${c.section}`;$('title').textContent=b.title??c.slide.title;$('points').innerHTML=c.slide.points.map(p=>`<li>${escape(p)}</li>`).join('');$('formula-note').textContent=c.formulaNote;renderLessonCopy();
  $('number').textContent=String(n+1).padStart(2,'0');$('beat-count').textContent=`pas ${index+1}/${beats.length}`;$('next-label').textContent=index===beats.length-1?'Explorare':beats[index+1].title??chapters.find(c=>c.id===beats[index+1].chapter)!.title;
  $('prev').toggleAttribute('disabled',index===0);$('explore').classList.toggle('hidden',index!==beats.length-1);$('ray-status').classList.toggle('hidden',b.scene!=='courtyard'||['bvh','aabb','traversal'].includes(c.id)||imagePhase());
@@ -102,11 +112,11 @@ function render(settled=false){
  const inline=false;$('inline-code').classList.toggle('hidden',!inline);if(inline){$('inline-label').textContent=c.codeLabel;$('inline-content').textContent=c.code;$('inline-source').textContent=c.codeSource;}
  $('bvh-panel').classList.toggle('hidden',!['bvh','aabb','traversal'].includes(c.id)||b.travel);$('sampling-panel').classList.add('hidden');$('temporal-panel').classList.toggle('hidden',b.id!=='temporal-motion');$('denoise-panel').classList.add('hidden');
  $('algorithm-panel').classList.toggle('hidden',!['hit','loop'].includes(c.id));if(c.id==='hit'){triangleU=primaryUV.u;triangleV=primaryUV.v;triangleParallel=false;mtStep=0;renderTriangle();}if(c.id==='loop')renderFlow();
- if(b.id==='image'){comparison.draw(1);$('comparison-controls').innerHTML='';$('comparison-state').textContent='';}if(b.id==='noise'){noiseSamples=1;noisePlaying=true;lastNoise=performance.now();renderSampling();}if(b.id==='temporal'){temporalSamples=1;temporalCamera=0;temporalPlaying=true;lastTemporal=performance.now();renderTemporalAverage();}if(b.id==='temporal-motion'){temporal.restart();renderTemporal();}if(b.id==='denoise'){denoisePass=0;denoisePlaying=true;lastDenoise=performance.now();renderDenoise();}
+ renderPrepared();if(b.id==='temporal-motion'){temporal.restart();renderTemporal();}
  updateMaterialPanel();$('sample-budget').classList.toggle('hidden',c.id!=='samples');if(c.id==='samples'){budgetPaths=1;budgetBounces=3;samplesPlaying=true;lastSample=performance.now();}
  const captions:Record<string,string>={diffuse:b.id==='diffuse-chosen'?'Direcție aleasă':'Direcții candidate',traversal:'Traversare BVH'};$('scene-caption').textContent=captions[c.id]??'';$('scene-caption').classList.toggle('hidden',!captions[c.id]||b.travel);
  for(const [id,visible] of [['hit-summary',c.id==='traversal'],['bvh-controls',c.id==='traversal'],['triangle-controls',c.id==='hit'],['mt-controls',b.id==='hit-steps'],['flow-controls',c.id==='loop'],['algorithm-status',['hit','loop'].includes(c.id)]] as const)$(id).classList.toggle('hidden',!visible||b.travel);
- $('lesson-scroll').scrollTop=0;document.body.classList.remove('experiment-expanded');expandButton.setAttribute('aria-expanded','false');expandButton.textContent='Mărește';expandButton.setAttribute('aria-label','Mărește demonstrația');expandButton.classList.toggle('hidden',!document.body.classList.contains('has-experiment')||document.body.classList.contains('has-path-lesson'));updateLayout();treeSignature='';journey?.setBeat(index,settled||imagePhase());updateMaterialPanel();if(['image','noise','temporal'].includes(b.id))captureComparison();if(c.id==='samples')renderBudget();if(c.id==='loop')updateFlow();updateContribution();updateBVH();document.title=`${c.title} · Ray Tracing`;
+ $('lesson-scroll').scrollTop=0;document.body.classList.remove('experiment-expanded');expandButton.setAttribute('aria-expanded','false');expandButton.textContent='Mărește';expandButton.setAttribute('aria-label','Mărește demonstrația');expandButton.classList.toggle('hidden',!document.body.classList.contains('has-experiment')||document.body.classList.contains('has-path-lesson'));updateLayout();treeSignature='';journey?.setBeat(index,settled||imagePhase());updateMaterialPanel();if(c.id==='samples')renderBudget();if(c.id==='loop')updateFlow();updateContribution();updateBVH();document.title=`${c.title} · Ray Tracing`;
 }
 let materialDiagram='';
 function updateMaterialPanel(){
@@ -119,38 +129,34 @@ function updateMaterialPanel(){
  $('glass-figure').innerHTML=mirror?reflectionIllustration():glassIllustration(true);
  $('glass-answer').textContent=mirror?'θᵢ = θᵣ':'Aer → sticlă → aer · ieșire paralelă';
 }
-function captureComparison(){
- const request=++comparisonCapture;
- // Journey paints on its own animation frame; allow its capped raster frame to finish.
- window.setTimeout(()=>{if(request!==comparisonCapture||!['image','noise','temporal'].includes(current().id)||exploring)return;comparison.capture($<HTMLCanvasElement>('scene'));comparison.draw(current().id==='noise'?noiseSamples:current().id==='image'?1:temporalSamples);},90);
+function renderPrepared(){
+ const id=current().id;
+ if(id==='image'){showCapture(comparison.draw(1));$('comparison-controls').innerHTML='';$('comparison-state').textContent='';}
+ if(id==='noise'){noiseSamples=1;noisePlaying=true;lastNoise=performance.now();renderSampling();}
+ if(id==='temporal'){temporalSamples=1;temporalPlaying=true;lastTemporal=performance.now();renderTemporalAverage();}
+ if(id==='denoise'){denoisePass=0;denoisePlaying=true;lastDenoise=performance.now();renderDenoise();}
 }
 function renderSampling(){
- $('comparison-label').innerHTML=`Același cadru · <b>${noiseSamples} spp</b>`;
- $('comparison-controls').innerHTML=`<label>Samples / pixel <input id="comparison-spp" type="range" min="1" max="256" step="1" value="${noiseSamples}"/><b>${noiseSamples}</b></label><div class="sample-choices">${[1,4,16,64,256].map(n=>`<button data-samples="${n}" aria-pressed="${n===noiseSamples}">${n} spp</button>`).join('')}</div><button data-noise-action="play">${noisePlaying?'Pauză Ⅱ':'Ciclu automat ▶'}</button>`;
- $('comparison-state').textContent='Aceeași cameră · același set de samples · zgomot ∝ 1 / √N';
- comparison.draw(noiseSamples);
+ const levels=[1,4,16,64,100].filter(n=>comparison.sampleCounts.includes(n));
+ $('comparison-controls').innerHTML=`<div class="sample-choices">${levels.map(n=>`<button data-samples="${n}" aria-pressed="${n===noiseSamples}">${n} spp</button>`).join('')}</div><button data-noise-action="play">${noisePlaying?'Pauză Ⅱ':'Rulează ▶'}</button>`;
+ $('comparison-state').textContent='';showCapture(comparison.draw(noiseSamples));
 }
 function renderTemporalAverage(){
- $('comparison-label').innerHTML=`Medie temporală · <b>N = ${temporalSamples}</b>`;
- $('comparison-controls').innerHTML=`<button data-average="play">${temporalPlaying?'Pauză Ⅱ':'Acumulează ▶'}</button><button data-average="step" ${temporalSamples===100?'disabled':''}>+1 cadru</button><button data-average="reset">Reset istoric</button><button data-average="camera">Schimbă camera → reset</button><span>1 sample / pixel / cadru</span>`;
- $('comparison-state').textContent=temporalSamples?`Cameră ${temporalCamera?'B':'A'} fixă · ${temporalSamples} cadre acumulate · Cₙ = Cₙ₋₁ + (Sₙ − Cₙ₋₁) / N`:'Istoric șters · N = 0';
- comparison.draw(temporalSamples);
+ const levels=comparison.sampleCounts.filter(n=>n<=100),last=levels.at(-1)??1;
+ $('comparison-controls').innerHTML=`<button data-average="play">${temporalPlaying?'Pauză Ⅱ':'Acumulează ▶'}</button><button data-average="step" ${temporalSamples===last?'disabled':''}>+1 cadru</button><button data-average="reset">Reset</button>`;
+ $('comparison-state').textContent='';showCapture(comparison.draw(temporalSamples,`N = ${temporalSamples}`));
 }
-$('comparison-controls').oninput=e=>{const input=e.target as HTMLInputElement;if(input.id==='comparison-strength'){denoiseStrength=Number(input.value);input.nextElementSibling!.textContent=denoiseStrength.toFixed(2);drawDenoiseComparison($<HTMLCanvasElement>('comparison-low'),$<HTMLCanvasElement>('comparison-high'),denoisePass,denoiseGuided,denoiseStrength);return;}if(input.id==='comparison-spp'){noiseSamples=Number(input.value);noisePlaying=false;comparison.draw(noiseSamples);$('comparison-label').innerHTML=`Același cadru · <b>${noiseSamples} spp</b>`;input.nextElementSibling!.textContent=String(noiseSamples);$('comparison-controls').querySelectorAll<HTMLElement>('[data-samples]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.samples)===noiseSamples)));const play=$('comparison-controls').querySelector<HTMLElement>('[data-noise-action]');if(play)play.textContent='Ciclu automat ▶';}};
 $('comparison-controls').onclick=e=>{
- const button=(e.target as Element).closest<HTMLElement>('button');if(!button)return;
- if(button.hasAttribute('data-denoise-pass')){denoisePass=Number(button.dataset.denoisePass);denoisePlaying=false;renderDenoise();return;}if(button.hasAttribute('data-denoise-guided')){denoiseGuided=!denoiseGuided;renderDenoise();return;}if(button.hasAttribute('data-denoise-play')){denoisePlaying=!denoisePlaying;lastDenoise=performance.now();renderDenoise();return;}
+ const button=(e.target as Element).closest<HTMLButtonElement>('button');if(!button)return;
+ if(button.hasAttribute('data-denoise-pass')){denoisePass=Number(button.dataset.denoisePass);denoisePlaying=false;renderDenoise();return;}
+ if(button.hasAttribute('data-denoise-play')){denoisePlaying=!denoisePlaying;lastDenoise=performance.now();renderDenoise();return;}
  if(button.dataset.samples){noiseSamples=Number(button.dataset.samples);noisePlaying=false;renderSampling();}
  if(button.dataset.noiseAction==='play'){noisePlaying=!noisePlaying;lastNoise=performance.now();renderSampling();}
- const action=button.dataset.average;if(!action)return;
- if(action==='play'){temporalPlaying=!temporalPlaying;if(temporalPlaying&&temporalSamples===100)temporalSamples=0;lastTemporal=performance.now();}
- if(action==='step'){temporalPlaying=false;temporalSamples=Math.min(100,temporalSamples+1);}
- if(action==='reset'){temporalSamples=0;lastTemporal=performance.now();}
- if(action==='camera'){
-  temporalSamples=0;lastTemporal=performance.now();temporalCamera=1-temporalCamera;
-  if(journey){journey.camera.position.x+=temporalCamera?2:-2;journey.camera.updateMatrixWorld();journey.invalidateRaster();captureComparison();}
- }
- renderTemporalAverage();
+ const action=button.dataset.average,levels=comparison.sampleCounts.filter(n=>n<=100),last=levels.at(-1)??1;
+ if(action==='play'){temporalPlaying=!temporalPlaying;if(temporalPlaying&&temporalSamples===last)temporalSamples=1;lastTemporal=performance.now();}
+ if(action==='step'){temporalPlaying=false;temporalSamples=levels[levels.indexOf(temporalSamples)+1]??last;}
+ if(action==='reset'){temporalSamples=1;lastTemporal=performance.now();}
+ if(action)renderTemporalAverage();
 };
 expandButton.onclick=()=>{const expanded=document.body.classList.toggle('experiment-expanded');expandButton.textContent=expanded?'Micșorează':'Mărește';expandButton.setAttribute('aria-label',expanded?'Micșorează demonstrația':'Mărește demonstrația');expandButton.setAttribute('aria-expanded',String(expanded));renderLessonCopy(expanded);$('lesson-scroll').scrollTop=0;};
 $('explorer-toggle').onclick=()=>{const collapsed=$('explorer').classList.toggle('collapsed');$('explorer-toggle').textContent=collapsed?'Deschide setările':'Restrânge setările';$('explorer-toggle').setAttribute('aria-expanded',String(!collapsed));};
@@ -175,10 +181,9 @@ $('sample-budget').onclick=e=>{
 };
 
 function renderDenoise(){
- $('comparison-label').innerHTML=`${denoiseGuided?'Filtru ghidat':'Fără ghidaje'} · <b>${denoisePass} treceri</b>`;
- $('comparison-controls').innerHTML=`<label>Treceri ${[0,1,2,3].map(n=>`<button data-denoise-pass="${n}" aria-pressed="${n===denoisePass}">${n}</button>`).join('')}</label><label>Forță <input id="comparison-strength" type="range" min="0" max="1" step=".05" value="${denoiseStrength}"/><b>${denoiseStrength.toFixed(2)}</b></label><button data-denoise-guided aria-pressed="${denoiseGuided}">${denoiseGuided?'Cu ghidaje':'Fără ghidaje'}</button><button data-denoise-play>${denoisePlaying?'Pauză Ⅱ':'Ciclu automat ▶'}</button>`;
- $('comparison-state').textContent='Același semnal și același zgomot · à-trous: pas 1 → 2 → 4';
- drawDenoiseComparison($<HTMLCanvasElement>('comparison-low'),$<HTMLCanvasElement>('comparison-high'),denoisePass,denoiseGuided,denoiseStrength);
+ const count=comparison.manifest?.denoise.guided.length??4;
+ $('comparison-controls').innerHTML=`<label>Treceri ${Array.from({length:count},(_,n)=>`<button data-denoise-pass="${n}" aria-pressed="${n===denoisePass}">${n}</button>`).join('')}</label><button data-denoise-play>${denoisePlaying?'Pauză Ⅱ':'Rulează ▶'}</button>`;
+ $('comparison-state').textContent='';showCapture(comparison.denoise(denoisePass));
 }
 function renderTemporal(){
  const panel=$('temporal-panel');
@@ -206,7 +211,7 @@ function renderMT(){
  const steps=mollerTrumboreSteps(triangleU,triangleV,triangleParallel);mtStep=Math.min(mtStep,steps.length-1);
  $('algorithm-heading').textContent='MÖLLER–TRUMBORE · PAS CU PAS';$('triangle-controls').classList.remove('hidden');$('flow-controls').classList.add('hidden');
  $('algorithm-figure').innerHTML=mollerTrumboreFigure(triangleU,triangleV,triangleParallel,mtStep)+`<ol class="mt-steps">${steps.map((s,i)=>`<li class="${i===mtStep?'active':i<mtStep?'done':'todo'}${s.exit&&i<=mtStep?' exit-'+s.exit:''}"><code>${escape(s.code)}</code><output>${i<=mtStep?escape(s.value):''}</output></li>`).join('')}</ol>`;
- $('algorithm-status').textContent=steps[mtStep].note;
+ $('algorithm-status').textContent=steps[mtStep].exit?.toUpperCase()??'';
  $<HTMLInputElement>('triangle-u').value=String(triangleU);$<HTMLInputElement>('triangle-v').value=String(triangleV);
  $<HTMLButtonElement>('mt-prev').disabled=mtStep===0;$<HTMLButtonElement>('mt-next').disabled=$<HTMLButtonElement>('mt-all').disabled=mtStep===steps.length-1;
 }
@@ -222,7 +227,7 @@ function updateFlow(){
  $('flow-l').textContent=rgbText(radiance);$('flow-beta').textContent=rgbText(beta);
  $('flow-step-name').textContent=`${flowIndex+1}/${loopLabels.length} · ${loopLabels[flowIndex]}`;
  $('flow-operation').textContent=loopOperations[flowIndex];
- $('algorithm-status').textContent=loopShortNotes[flowIndex];
+ $('algorithm-status').textContent='';
  $('algorithm-heading').textContent='PENTRU FIECARE SAMPLE(q) → REPETĂ INTERACȚIUNILE';
  $('flow-play').textContent=flowPlaying?'Pauză Ⅱ':'Rulează ▶';
 }
@@ -248,12 +253,12 @@ function updateBVH(){
  $('sah-chart').classList.add('hidden');$('slabs').classList.toggle('hidden',c.id!=='aabb');$('trace-status').classList.toggle('hidden',['sah','aabb'].includes(c.id));
  if(c.id==='sah'){const chosen=v.splitCandidates,max=Math.max(v.tree.indices.length,...chosen.map(s=>s.cost)),selected=chosen[v.candidateIndex];$('sah-chart').innerHTML=`<div class="eyebrow">COMPARĂ TĂIETURILE · ACELAȘI MODEL</div>`+chosen.map((s,i)=>`<button data-split="${i}" aria-pressed="${i===v.candidateIndex}"><span>${'XYZ'[s.axis]} = ${s.plane.toFixed(1)}<small>Nₗ=${s.left} · Nᵣ=${s.right}</small></span><i style="--cost:${100*s.cost/max}%"></i><b>${s.cost.toFixed(1)} ${i===0?'✓':''}</b></button>`).join('')+`<div id="sah-values">S=${selected.parentArea.toFixed(1)}<br><span class="left-group">Sₗ=${selected.leftArea.toFixed(1)} · Nₗ=${selected.left}</span><br><span class="right-group">Sᵣ=${selected.rightArea.toFixed(1)} · Nᵣ=${selected.right}</span><br>C = 1 + ${(selected.leftArea/selected.parentArea*selected.left).toFixed(2)} + ${(selected.rightArea/selected.parentArea*selected.right).toFixed(2)} = ${selected.cost.toFixed(2)}<br>Frunză fără tăiere: C=${v.tree.indices.length}</div>`;}
  if(c.id==='aabb')$('slabs').innerHTML=slabIllustration(v.testRayOrigin,v.testRayDirection,v.tree.min,v.tree.max)+`<p id="slab-context">Cutie N0 · o=[${v.testRayOrigin.map(n=>n.toFixed(1)).join(', ')}]<br>d=[${v.testRayDirection.map(n=>n.toFixed(3)).join(', ')}]</p>`;
- const hit=v.currentHit,hitLabel=hit.triangle>=0?`Triunghi #${hit.triangle}`:'Niciun hit';
+ const hit=v.currentHit,hitLabel=hit.triangle>=0?`Tri #${hit.triangle}`:'';
  if(tracing)$('trace-status').innerHTML=`<div class="trace-line"><b>N${e.node.id}: ${e.status.toUpperCase()}</b></div>${e.testedTriangle===undefined?'':`<p>Tri #${e.testedTriangle} · t=${e.triangleDistance===null?'MISS':e.triangleDistance?.toFixed(3)}</p>`}<p>Stivă [${e.stack.join(', ')}]</p>`;
- else $('trace-status').innerHTML=`<div class="compare"><div><b>${v.triangleCount} → ${v.traversal.triangleTests}</b><span>teste de triunghi: brute force → BVH</span></div></div><p>N${active.id} · ${active.indices.length} triunghiuri · ${active.children?'nod intern':'frunză'}</p>`;
+ else $('trace-status').innerHTML=`<div class="compare"><div><b>${v.triangleCount} → ${v.traversal.triangleTests}</b><span>brut → BVH</span></div></div><p>N${active.id} · ${active.indices.length} triunghiuri</p>`;
  const closestLabel=Number.isFinite(hit.closest)?hit.closest.toFixed(3):'∞';
  if(tracing)$('hit-summary').textContent=`AABB ${e.boxTests} · tri ${e.triangleTests} · ${traversalSummary(hit.triangle,hit.closest,v.lastStep===v.traversal.events.length-1)}`;
- else if(c.id==='traversal')$('trace-status').innerHTML+=`<p class="hit-legend">${hitLabel} · tClosest = ${closestLabel}</p>`;
+ else if(c.id==='traversal')$('trace-status').innerHTML+=`<p class="hit-legend">${hitLabel} · t = ${closestLabel}</p>`;
  for(const id of ['step-prev','step-next','trace-replay','trace-last','trace-play'])$(id).classList.toggle('hidden',!tracing);$('trace-play').textContent=v.manualStep===null?'Pauză Ⅱ':'Rulează ▶';
 }
 $('bvh-ray-cases').onclick=e=>{const button=(e.target as Element).closest<HTMLElement>('[data-ray-case]');if(button){journey?.visuals.setCase(button.dataset.rayCase!);journey?.invalidateRaster();treeSignature='';updateBVH();}};
@@ -268,7 +273,7 @@ document.querySelectorAll<HTMLElement>('[data-chapter]').forEach(el=>el.onclick=
 $('prev').onclick=()=>go(index-1,true);$('next').onclick=advance;$('replay').onclick=()=>{if(chapter().id==='samples'){budgetPaths=0;samplesPlaying=true;lastSample=performance.now();renderBudget();}else if(chapter().id==='loop')renderFlow();else journey?.replayShot();};
 $('overview-open').onclick=()=>openDialog('overview');$('sources-open').onclick=()=>openDialog('sources');$('code-open').onclick=()=>{const c=chapter();$('code-title').textContent=c.title;const glsl=/\b(vec[234]|float|Ray|BSDFSample)\b/.test(c.code);$('code-label').textContent=glsl&&c.id!=='denoise'?`GLSL simplificat · ${c.codeLabel.replace(/^GLSL\s*·?\s*/, '')}`:c.codeLabel;$('code-content').textContent=current().id==='materials'?'vec3 next = reflect(direction, n);':c.code;if(current().id==='materials'){$('code-title').textContent='Reflexie perfectă';$('code-label').textContent='GLSL simplificat · oglindă';}if(current().id==='to-glass'){$('code-title').textContent='Refracție · placă paralelă';$('code-label').textContent='GLSL simplificat · dielectric';}$('code-source').textContent=c.codeSource;openDialog('code');};$('notes-open').onclick=()=>{const c=chapter(),teaching=teachingCopy[c.id];$('notes-title').textContent=c.title;$('notes-content').textContent=[c.intro,...c.points.map(p=>'• '+p),c.id==='materials'?`βin ${rgbText(materialThroughput[1])} × ρmetal ${rgbText(metalReflectance)} = βout ${rgbText(materialThroughput[2])}`:null,teaching?.text,teaching?.formula,c.formula,c.formulaNote,c.notes].filter(Boolean).join('\n\n');$('notes-sources').innerHTML=c.sources.map(s=>`<a href="${s}" target="_blank" rel="noopener noreferrer">${s}</a>`).join('');openDialog('notes');};
 $('fullscreen').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>toast('Fullscreen indisponibil.'));};
-const interactiveSelector='button,a,input,select,textarea,label,[contenteditable],[role="button"],dialog,#explorer,#active-figure,#experiment-controls';
+const interactiveSelector='button,a,input,select,textarea,label,[contenteditable],#comparison-divider,[role="button"],dialog,#explorer,#active-figure,#experiment-controls';
 function presentationBackground(target:EventTarget|null){
  if(exploring||picking||document.querySelector('dialog[open]')||!(target instanceof Element))return false;
  return !target.closest(interactiveSelector)&&!(document.body.classList.contains('experiment-expanded')&&target.closest('#presentation'));
@@ -338,6 +343,6 @@ function updateContribution(){
  panel.innerHTML=`<div class="return-to-pixel"><code>ΔL = β × Le</code><span aria-hidden="true">→</span><span class="lesson-pixel" style="background:${rgbSwatch(e.contribution)}"></span><b>pixel q</b></div>`;
 }
 
-function uiFrame(time:number){if(imagePhase()&&!exploring){const pixel=journey?.primaryPixel;$('image-pixel').classList.toggle('hidden',!pixel?.visible);if(pixel?.visible){$('image-pixel').style.left=`${pixel.x}px`;$('image-pixel').style.top=`${pixel.y}px`;}}const showPixel=!exploring&&!current().travel&&chapter().id==='ray',pixel=showPixel?journey?.primaryPixel:undefined;$('pixel-marker').classList.toggle('hidden',!pixel?.visible);if(pixel?.visible){$('pixel-marker').style.left=`${pixel.x}px`;$('pixel-marker').style.top=`${pixel.y}px`;}updateWorldLabels();if(chapter().id==='samples'&&samplesPlaying&&!journey?.paused&&time-lastSample>950){lastSample=time;budgetPaths=Math.min(exampleCount,budgetPaths+1);if(budgetPaths===exampleCount)samplesPlaying=false;renderBudget();} if(chapter().id==='loop'&&flowPlaying&&!journey?.paused&&time-lastFlow>900){lastFlow=time;flowIndex=Math.min(loopLabels.length-1,flowIndex+1);if(flowIndex===loopLabels.length-1)flowPlaying=false;updateFlow();}if(current().id==='noise'&&noisePlaying&&!journey?.paused&&time-lastNoise>1400){lastNoise=time;const levels=[1,4,16,64,256];noiseSamples=levels[(levels.indexOf(noiseSamples)+1)%levels.length];renderSampling();}if(current().id==='denoise'&&denoisePlaying&&!journey?.paused&&time-lastDenoise>(denoisePass===3?2200:1400)){lastDenoise=time;denoisePass=(denoisePass+1)%4;renderDenoise();}if(chapter().id==='temporal'&&temporalPlaying&&!journey?.paused&&time-lastTemporal>(current().id==='temporal'&&temporalSamples===100?2200:110)){lastTemporal=time;if(current().id==='temporal-motion'){temporal.step();renderTemporal();}else{temporalSamples=temporalSamples===100?1:Math.min(100,temporalSamples+1);renderTemporalAverage();}}if(time-lastUi>150){lastUi=time;updateMaterialPanel();document.body.classList.toggle('is-moving',Boolean(journey?.isMoving));if(!journey?.pathTracing)$('render-status').textContent=graphicsFeedback(graphicsAvailable);if(journey){const p=journey.visuals.progress,leg=Math.min(4,Math.floor(p)),weight=journey.rayWeight;$('ray-info').textContent=`segment ${Math.min(5,leg+1)}`;$('beta-info').textContent=`β [${weight.rgb.map(v=>v.toFixed(2)).join(', ')}]`;updateBVH();}}requestAnimationFrame(uiFrame);}requestAnimationFrame(uiFrame);
+function uiFrame(time:number){if(imagePhase()&&!exploring){const pixel=journey?.primaryPixel;$('image-pixel').classList.toggle('hidden',!pixel?.visible);if(pixel?.visible){$('image-pixel').style.left=`${pixel.x}px`;$('image-pixel').style.top=`${pixel.y}px`;}}const showPixel=!exploring&&!current().travel&&chapter().id==='ray',pixel=showPixel?journey?.primaryPixel:undefined;$('pixel-marker').classList.toggle('hidden',!pixel?.visible);if(pixel?.visible){$('pixel-marker').style.left=`${pixel.x}px`;$('pixel-marker').style.top=`${pixel.y}px`;}updateWorldLabels();if(chapter().id==='samples'&&samplesPlaying&&!journey?.paused&&time-lastSample>950){lastSample=time;budgetPaths=Math.min(exampleCount,budgetPaths+1);if(budgetPaths===exampleCount)samplesPlaying=false;renderBudget();} if(chapter().id==='loop'&&flowPlaying&&!journey?.paused&&time-lastFlow>900){lastFlow=time;flowIndex=Math.min(loopLabels.length-1,flowIndex+1);if(flowIndex===loopLabels.length-1)flowPlaying=false;updateFlow();}if(current().id==='noise'&&noisePlaying&&!journey?.paused&&time-lastNoise>1400){lastNoise=time;const levels=[1,4,16,64,100].filter(n=>comparison.sampleCounts.includes(n));noiseSamples=levels[(levels.indexOf(noiseSamples)+1)%levels.length];renderSampling();}if(current().id==='denoise'&&denoisePlaying&&!journey?.paused&&time-lastDenoise>(denoisePass===3?2200:1400)){lastDenoise=time;denoisePass=(denoisePass+1)%4;renderDenoise();}if(chapter().id==='temporal'&&temporalPlaying&&!journey?.paused&&time-lastTemporal>(current().id==='temporal'&&temporalSamples===100?2200:110)){lastTemporal=time;if(current().id==='temporal-motion'){temporal.step();renderTemporal();}else{const levels=comparison.sampleCounts.filter(n=>n<=100);temporalSamples=levels[levels.indexOf(temporalSamples)+1]??1;renderTemporalAverage();}}if(time-lastUi>150){lastUi=time;updateMaterialPanel();document.body.classList.toggle('is-moving',Boolean(journey?.isMoving));if(!journey?.pathTracing)$('render-status').textContent=graphicsFeedback(graphicsAvailable);if(journey){const p=journey.visuals.progress,leg=Math.min(4,Math.floor(p)),weight=journey.rayWeight;$('ray-info').textContent=`segment ${Math.min(5,leg+1)}`;$('beta-info').textContent=`β [${weight.rgb.map(v=>v.toFixed(2)).join(', ')}]`;updateBVH();}}requestAnimationFrame(uiFrame);}requestAnimationFrame(uiFrame);
 if(capture){if(!params.has('ui'))document.body.classList.add('capture');index=Math.max(0,beats.findIndex(b=>b.id===capture));render(true);if(capture==='beauty'||capture==='final')startExplore();window.setTimeout(()=>{if(journey){journey.paused=true;if(capturePhase!==null)journey.captureAt(Number(capturePhase));if(current().captureStep!==undefined)journey.visuals.step(current().captureStep!);if(capturePhase===null)journey.visuals.update(8*current().captureTime,current().rayTo);journey.invalidateRaster();}requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.dataset.captureReady='true'));},400);}else render(true);
 // No path tracer is imported, prepared or rendered before the explicit Start button.

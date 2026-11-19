@@ -17,7 +17,7 @@ import {retroRaster,explorerRaster} from '../core/raster';
 
 export class Journey{
  renderer:T.WebGLRenderer;camera=new T.PerspectiveCamera(43,1,.05,1000);room=createRoom();courtyard=createCourtyard();visuals:JourneyVisuals;
- pendingSettings:Partial<RenderSettings>={};controls:OrbitControls;finale:Finale|null=null;exploring=false;pathTracing=false;paused=false;supported:boolean;index=0;fps=0;elapsed=0;transition=1;
+ pendingSettings:Partial<RenderSettings>={};controls:OrbitControls;finale:Finale|null=null;exploring=false;pathTracing=false;paused=false;preparedVisible=false;supported:boolean;index=0;fps=0;elapsed=0;transition=1;
  private sceneViewport={left:0,top:0,width:1,height:1};private keys=new Set<string>();private previous=0;private active=true;private from=new T.Vector3();private fromTarget=new T.Vector3();private target=new T.Vector3();private portalFrom:[number,number,number]=[...portalStart];private monitorPosition:[number,number,number]=[...portalStart];
  private tracingRequests=new RequestGeneration();private drawKey='';private portalAspect=-1;private portalFrame=-1;private portalCamera=new T.PerspectiveCamera(43,1.66/1.06,.05,400);private portalTarget=new T.WebGLRenderTarget(480,306);
  private transitionFrom:Beat|null=null;private transitionShot:Beat|null=null;
@@ -38,6 +38,7 @@ export class Journey{
  }
  get beat(){return beats[this.index];}get isMoving(){return this.transition<1;}
  invalidateRaster(){this.drawKey='';}
+ setPreparedVisible(visible:boolean){this.preparedVisible=visible;if(!visible)this.invalidateRaster();}
  setLessonSamples(count:number,depth:number){this.visuals.setLessonSamples(count,depth);this.invalidateRaster();}
  replayVisuals(){this.elapsed=0;this.visuals.apply(this.beat);this.invalidateRaster();}
  replayShot(){this.setBeat(this.index,false,true);}
@@ -111,7 +112,7 @@ export class Journey{
  }
  captureAt(t:number){this.transition=Math.max(0,Math.min(1,t));this.elapsed=this.beat.seconds*this.transition;this.updateTransition(this.transition);const state=shotState(this.beat.motion??'arrive',this.transition,this.beat.rayFrom,this.beat.rayTo);this.visuals.update(this.elapsed,state.ray);this.visuals.fitHead(this.camera,this.rasterTarget.height);this.paused=true;this.invalidateRaster();}
  private frame=(now:number)=>{
-  requestAnimationFrame(this.frame);if(!this.active)return;const measured=this.previous?(now-this.previous)/1000:0;if(measured&&measured<1/32)return;this.previous=now;if(measured>0)this.fps=this.fps*.9+(1/measured)*.1;const dt=Math.min(.06,measured);
+  requestAnimationFrame(this.frame);if(!this.active||this.preparedVisible&&!this.exploring)return;const measured=this.previous?(now-this.previous)/1000:0;if(measured&&measured<1/32)return;this.previous=now;if(measured>0)this.fps=this.fps*.9+(1/measured)*.1;const dt=Math.min(.06,measured);
   if(this.exploring){
     if(!this.paused){const forward=new T.Vector3();this.camera.getWorldDirection(forward);forward.y=0;forward.normalize();const right=new T.Vector3().crossVectors(forward,new T.Vector3(0,1,0)),v=new T.Vector3();if(this.keys.has('w'))v.add(forward);if(this.keys.has('s'))v.sub(forward);if(this.keys.has('d'))v.add(right);if(this.keys.has('a'))v.sub(right);if(this.keys.has('e'))v.y++;if(this.keys.has('q'))v.y--;v.normalize().multiplyScalar(dt*(this.keys.has('shift')?16:6));this.camera.position.add(v);this.controls.target.add(v);const p=this.camera.position.clone(),q=this.camera.quaternion.clone(),t=this.controls.target.clone();if(!this.controls.update(dt)){this.camera.position.copy(p);this.camera.quaternion.copy(q);this.controls.target.copy(t);}}
     if(this.pathTracing&&!this.paused){if(this.finale)this.finale.focusDistance=this.controls.getDistance();this.onFrame?.(this.finale?.render(now));}else {this.renderer.setRenderTarget(null);this.renderer.render(this.courtyard.scene,this.camera);}return;

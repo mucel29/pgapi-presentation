@@ -71,6 +71,8 @@ export function createCourtyard(){
  const pedestalTop=probePosition[1]+probeData.tree.min[1]*probeScale;
  const pedestal=cylinder(3.3,1.1,[probePosition[0],pedestalTop-.55,probePosition[2]],steel);pedestal.name='Stanford Bunny pedestal';
  cylinder(3.6,.3,[probePosition[0],pedestalTop-1.25,probePosition[2]],dark);
+ const columnBottom=-73.5,columnTop=pedestalTop-1.4;
+ const column=cylinder(2.7,columnTop-columnBottom,[probePosition[0],(columnTop+columnBottom)/2,probePosition[2]],deepStone);column.name='Stanford Bunny support column';
  scene.add(new T.HemisphereLight('#adc9da','#594441',1.05));
  const sun=new T.DirectionalLight('#ffddb1',3.2);sun.position.set(-95,140,75);sun.target.position.set(20,10,-20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-175,right:175,top:150,bottom:-140,far:440});sun.shadow.normalBias=.1;sun.shadow.bias=-.0001;scene.add(sun,sun.target);
  scene.environment=daylightEnvironment();scene.environmentIntensity=.32;scene.updateMatrixWorld(true);

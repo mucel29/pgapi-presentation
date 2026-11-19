@@ -1,0 +1,527 @@
+{
+  "version": 1,
+  "width": 1280,
+  "height": 720,
+  "samples": [
+    {
+      "spp": 1,
+      "url": "/assets/pathtraced/raw-001.webp"
+    },
+    {
+      "spp": 2,
+      "url": "/assets/pathtraced/raw-002.webp"
+    },
+    {
+      "spp": 3,
+      "url": "/assets/pathtraced/raw-003.webp"
+    },
+    {
+      "spp": 4,
+      "url": "/assets/pathtraced/raw-004.webp"
+    },
+    {
+      "spp": 5,
+      "url": "/assets/pathtraced/raw-005.webp"
+    },
+    {
+      "spp": 6,
+      "url": "/assets/pathtraced/raw-006.webp"
+    },
+    {
+      "spp": 7,
+      "url": "/assets/pathtraced/raw-007.webp"
+    },
+    {
+      "spp": 8,
+      "url": "/assets/pathtraced/raw-008.webp"
+    },
+    {
+      "spp": 9,
+      "url": "/assets/pathtraced/raw-009.webp"
+    },
+    {
+      "spp": 10,
+      "url": "/assets/pathtraced/raw-010.webp"
+    },
+    {
+      "spp": 11,
+      "url": "/assets/pathtraced/raw-011.webp"
+    },
+    {
+      "spp": 12,
+      "url": "/assets/pathtraced/raw-012.webp"
+    },
+    {
+      "spp": 13,
+      "url": "/assets/pathtraced/raw-013.webp"
+    },
+    {
+      "spp": 14,
+      "url": "/assets/pathtraced/raw-014.webp"
+    },
+    {
+      "spp": 15,
+      "url": "/assets/pathtraced/raw-015.webp"
+    },
+    {
+      "spp": 16,
+      "url": "/assets/pathtraced/raw-016.webp"
+    },
+    {
+      "spp": 17,
+      "url": "/assets/pathtraced/raw-017.webp"
+    },
+    {
+      "spp": 18,
+      "url": "/assets/pathtraced/raw-018.webp"
+    },
+    {
+      "spp": 19,
+      "url": "/assets/pathtraced/raw-019.webp"
+    },
+    {
+      "spp": 20,
+      "url": "/assets/pathtraced/raw-020.webp"
+    },
+    {
+      "spp": 21,
+      "url": "/assets/pathtraced/raw-021.webp"
+    },
+    {
+      "spp": 22,
+      "url": "/assets/pathtraced/raw-022.webp"
+    },
+    {
+      "spp": 23,
+      "url": "/assets/pathtraced/raw-023.webp"
+    },
+    {
+      "spp": 24,
+      "url": "/assets/pathtraced/raw-024.webp"
+    },
+    {
+      "spp": 25,
+      "url": "/assets/pathtraced/raw-025.webp"
+    },
+    {
+      "spp": 26,
+      "url": "/assets/pathtraced/raw-026.webp"
+    },
+    {
+      "spp": 27,
+      "url": "/assets/pathtraced/raw-027.webp"
+    },
+    {
+      "spp": 28,
+      "url": "/assets/pathtraced/raw-028.webp"
+    },
+    {
+      "spp": 29,
+      "url": "/assets/pathtraced/raw-029.webp"
+    },
+    {
+      "spp": 30,
+      "url": "/assets/pathtraced/raw-030.webp"
+    },
+    {
+      "spp": 31,
+      "url": "/assets/pathtraced/raw-031.webp"
+    },
+    {
+      "spp": 32,
+      "url": "/assets/pathtraced/raw-032.webp"
+    },
+    {
+      "spp": 33,
+      "url": "/assets/pathtraced/raw-033.webp"
+    },
+    {
+      "spp": 34,
+      "url": "/assets/pathtraced/raw-034.webp"
+    },
+    {
+      "spp": 35,
+      "url": "/assets/pathtraced/raw-035.webp"
+    },
+    {
+      "spp": 36,
+      "url": "/assets/pathtraced/raw-036.webp"
+    },
+    {
+      "spp": 37,
+      "url": "/assets/pathtraced/raw-037.webp"
+    },
+    {
+      "spp": 38,
+      "url": "/assets/pathtraced/raw-038.webp"
+    },
+    {
+      "spp": 39,
+      "url": "/assets/pathtraced/raw-039.webp"
+    },
+    {
+      "spp": 40,
+      "url": "/assets/pathtraced/raw-040.webp"
+    },
+    {
+      "spp": 41,
+      "url": "/assets/pathtraced/raw-041.webp"
+    },
+    {
+      "spp": 42,
+      "url": "/assets/pathtraced/raw-042.webp"
+    },
+    {
+      "spp": 43,
+      "url": "/assets/pathtraced/raw-043.webp"
+    },
+    {
+      "spp": 44,
+      "url": "/assets/pathtraced/raw-044.webp"
+    },
+    {
+      "spp": 45,
+      "url": "/assets/pathtraced/raw-045.webp"
+    },
+    {
+      "spp": 46,
+      "url": "/assets/pathtraced/raw-046.webp"
+    },
+    {
+      "spp": 47,
+      "url": "/assets/pathtraced/raw-047.webp"
+    },
+    {
+      "spp": 48,
+      "url": "/assets/pathtraced/raw-048.webp"
+    },
+    {
+      "spp": 49,
+      "url": "/assets/pathtraced/raw-049.webp"
+    },
+    {
+      "spp": 50,
+      "url": "/assets/pathtraced/raw-050.webp"
+    },
+    {
+      "spp": 51,
+      "url": "/assets/pathtraced/raw-051.webp"
+    },
+    {
+      "spp": 52,
+      "url": "/assets/pathtraced/raw-052.webp"
+    },
+    {
+      "spp": 53,
+      "url": "/assets/pathtraced/raw-053.webp"
+    },
+    {
+      "spp": 54,
+      "url": "/assets/pathtraced/raw-054.webp"
+    },
+    {
+      "spp": 55,
+      "url": "/assets/pathtraced/raw-055.webp"
+    },
+    {
+      "spp": 56,
+      "url": "/assets/pathtraced/raw-056.webp"
+    },
+    {
+      "spp": 57,
+      "url": "/assets/pathtraced/raw-057.webp"
+    },
+    {
+      "spp": 58,
+      "url": "/assets/pathtraced/raw-058.webp"
+    },
+    {
+      "spp": 59,
+      "url": "/assets/pathtraced/raw-059.webp"
+    },
+    {
+      "spp": 60,
+      "url": "/assets/pathtraced/raw-060.webp"
+    },
+    {
+      "spp": 61,
+      "url": "/assets/pathtraced/raw-061.webp"
+    },
+    {
+      "spp": 62,
+      "url": "/assets/pathtraced/raw-062.webp"
+    },
+    {
+      "spp": 63,
+      "url": "/assets/pathtraced/raw-063.webp"
+    },
+    {
+      "spp": 64,
+      "url": "/assets/pathtraced/raw-064.webp"
+    },
+    {
+      "spp": 65,
+      "url": "/assets/pathtraced/raw-065.webp"
+    },
+    {
+      "spp": 66,
+      "url": "/assets/pathtraced/raw-066.webp"
+    },
+    {
+      "spp": 67,
+      "url": "/assets/pathtraced/raw-067.webp"
+    },
+    {
+      "spp": 68,
+      "url": "/assets/pathtraced/raw-068.webp"
+    },
+    {
+      "spp": 69,
+      "url": "/assets/pathtraced/raw-069.webp"
+    },
+    {
+      "spp": 70,
+      "url": "/assets/pathtraced/raw-070.webp"
+    },
+    {
+      "spp": 71,
+      "url": "/assets/pathtraced/raw-071.webp"
+    },
+    {
+      "spp": 72,
+      "url": "/assets/pathtraced/raw-072.webp"
+    },
+    {
+      "spp": 73,
+      "url": "/assets/pathtraced/raw-073.webp"
+    },
+    {
+      "spp": 74,
+      "url": "/assets/pathtraced/raw-074.webp"
+    },
+    {
+      "spp": 75,
+      "url": "/assets/pathtraced/raw-075.webp"
+    },
+    {
+      "spp": 76,
+      "url": "/assets/pathtraced/raw-076.webp"
+    },
+    {
+      "spp": 77,
+      "url": "/assets/pathtraced/raw-077.webp"
+    },
+    {
+      "spp": 78,
+      "url": "/assets/pathtraced/raw-078.webp"
+    },
+    {
+      "spp": 79,
+      "url": "/assets/pathtraced/raw-079.webp"
+    },
+    {
+      "spp": 80,
+      "url": "/assets/pathtraced/raw-080.webp"
+    },
+    {
+      "spp": 81,
+      "url": "/assets/pathtraced/raw-081.webp"
+    },
+    {
+      "spp": 82,
+      "url": "/assets/pathtraced/raw-082.webp"
+    },
+    {
+      "spp": 83,
+      "url": "/assets/pathtraced/raw-083.webp"
+    },
+    {
+      "spp": 84,
+      "url": "/assets/pathtraced/raw-084.webp"
+    },
+    {
+      "spp": 85,
+      "url": "/assets/pathtraced/raw-085.webp"
+    },
+    {
+      "spp": 86,
+      "url": "/assets/pathtraced/raw-086.webp"
+    },
+    {
+      "spp": 87,
+      "url": "/assets/pathtraced/raw-087.webp"
+    },
+    {
+      "spp": 88,
+      "url": "/assets/pathtraced/raw-088.webp"
+    },
+    {
+      "spp": 89,
+      "url": "/assets/pathtraced/raw-089.webp"
+    },
+    {
+      "spp": 90,
+      "url": "/assets/pathtraced/raw-090.webp"
+    },
+    {
+      "spp": 91,
+      "url": "/assets/pathtraced/raw-091.webp"
+    },
+    {
+      "spp": 92,
+      "url": "/assets/pathtraced/raw-092.webp"
+    },
+    {
+      "spp": 93,
+      "url": "/assets/pathtraced/raw-093.webp"
+    },
+    {
+      "spp": 94,
+      "url": "/assets/pathtraced/raw-094.webp"
+    },
+    {
+      "spp": 95,
+      "url": "/assets/pathtraced/raw-095.webp"
+    },
+    {
+      "spp": 96,
+      "url": "/assets/pathtraced/raw-096.webp"
+    },
+    {
+      "spp": 97,
+      "url": "/assets/pathtraced/raw-097.webp"
+    },
+    {
+      "spp": 98,
+      "url": "/assets/pathtraced/raw-098.webp"
+    },
+    {
+      "spp": 99,
+      "url": "/assets/pathtraced/raw-099.webp"
+    },
+    {
+      "spp": 100,
+      "url": "/assets/pathtraced/raw-100.webp"
+    }
+  ],
+  "denoise": {
+    "spp": 4,
+    "raw": "/assets/pathtraced/raw-004.webp",
+    "guided": [
+      "/assets/pathtraced/raw-004.webp",
+      "/assets/pathtraced/guided-1-004.webp",
+      "/assets/pathtraced/guided-2-004.webp",
+      "/assets/pathtraced/guided-3-004.webp"
+    ],
+    "strength": 0.8,
+    "passes": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "guides": {
+      "normal": "/assets/pathtraced/guide-normal.webp",
+      "depth": "/assets/pathtraced/guide-depth.webp",
+      "albedo": "/assets/pathtraced/guide-albedo.webp"
+    },
+    "filter": {
+      "implementation": "src/engine/denoiser.ts Denoiser.run / filterFragment",
+      "kernel": [
+        1,
+        4,
+        6,
+        4,
+        1
+      ],
+      "stepWidths": [
+        1,
+        2,
+        4
+      ],
+      "normalExponent": 32,
+      "depthScale": "max(0.015, depth * 0.015) * stepWidth",
+      "albedoFalloff": 8,
+      "luminanceScale": "max(0.12, luma(center) * 0.5) * max(strength, 0.01)",
+      "strength": 0.8,
+      "rawHistoryUnmodified": true
+    }
+  },
+  "camera": {
+    "position": [
+      -64,
+      15.999999999999996,
+      48
+    ],
+    "target": [
+      -61.24087451403128,
+      16,
+      42.67203354433627
+    ],
+    "quaternion": [
+      2.8764995883835095e-16,
+      -0.23664909752913937,
+      7.00622071556306e-17,
+      0.9715951855781522
+    ],
+    "fov": 43,
+    "aspect": 1.7777777777777777,
+    "near": 0.05,
+    "far": 1000,
+    "projection": [
+      1.427989441311173,
+      0,
+      0,
+      0,
+      0,
+      2.5386478956643073,
+      0,
+      0,
+      0,
+      0,
+      -1.00010000500025,
+      -1,
+      0,
+      0,
+      -0.1000050002500125,
+      0
+    ],
+    "source": "world-shots imageHold / Journey settled noise camera"
+  },
+  "renderer": {
+    "name": "three-gpu-pathtracer WebGLPathTracer",
+    "version": "0.0.23",
+    "three": "0.184.0",
+    "principalBounces": 8,
+    "transmissiveBounces": 8,
+    "stableNoise": true,
+    "tiles": [
+      1,
+      1
+    ],
+    "pixelRatio": 1,
+    "textureSize": [
+      512,
+      512
+    ],
+    "display": "existing Denoiser.present ACES + gamma 1/2.2",
+    "encoding": "image/webp quality .94"
+  },
+  "provenance": {
+    "capturedAt": "2026-11-19T08:23:18.263Z",
+    "scene": "createCourtyard, including Stanford Bunny support column",
+    "accumulation": "One uninterrupted true progressive accumulation, every raw N is the first N genuine path tracer samples; no synthesized noise or blended intermediate frames.",
+    "guides": "Existing GeometryGuides rendered from the same scene and exact camera, used by existing Denoiser.run.",
+    "overlays": "No JourneyVisuals, helper rays, UI pixels or labels in exported canvas.",
+    "captureEntry": "/capture.html",
+    "credits": "See /assets/pathtraced/CREDITS.md",
+    "sourceSHA256": {
+      "src/engine/courtyard.ts": "271ce170227b77615fbb1133800229647a028ad1defc0522bc35808cdcafb1b7",
+      "src/engine/finale.ts": "797ee7c1d4bff1f5d5617d1039f09fa357abf4df27d3237d216a5f06ed94b64e",
+      "src/engine/denoiser.ts": "ce10038283e2ed1c46b098ec8ddd501f91d10f41c0fce253a6abf00a503764e6",
+      "src/content/world-shots.ts": "a9e2df1b9e31749008b757d6164e231dd98084d9bf61b5e90b5b56916c71aabd",
+      "src/core/sampling.ts": "db6b6009792bc8d8b0617289e9cd982e0019774d2e9dd97ed8b9f4dc5ed736a7",
+      "src/core/world.ts": "010f51a10116fbaaf29b8713e6f7aafefdc6b7d182540bd25bdf8f3d08eb29eb"
+    }
+  }
+}

@@ -7,7 +7,7 @@ export class ModalPause {
 }
 export function traversalSummary(triangle:number,closest:number,complete:boolean){
  const t=Number.isFinite(closest)?closest.toFixed(3):'∞';
- return `${complete?'Final':'În curs'} · ${triangle>=0?`triunghi #${triangle}`:complete?'MISS':'niciun hit de triunghi încă'} · tClosest ${t}`;
+ return `${triangle>=0?`HIT · tri #${triangle} · t ${t}`:complete?'MISS':'…'}`;
 }
 export function graphicsFeedback(available:boolean,tracing=false){return available?(tracing?'PATH TRACING':'WEBGL 2 · RASTER'):'GRAFICĂ 3D INDISPONIBILĂ · lecția text rămâne accesibilă';}
 export function routeHash(chapter:string,beat:string){return `#chapter=${encodeURIComponent(chapter)}&beat=${encodeURIComponent(beat)}`;}
