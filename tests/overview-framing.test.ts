@@ -8,14 +8,14 @@ test('lessons continue beyond glass without a global camera return',()=>{
   assert.ok(b.position[0]>=a.position[0]-1,id);
  }
 });
-test('sampling and loop keep only the unscaled physical path after source/back/revisit',()=>{
+test('sampling keeps only the unscaled physical path after source/back/revisit',()=>{
  const visuals=new JourneyVisuals(createCourtyard());
- for(const id of ['samples','loop','light','samples','bvh','loop']){
+ for(const id of ['samples','light','samples','bvh','samples']){
   const beat=beats.find(b=>b.id===id)!;visuals.apply(beat);visuals.update(8,beat.rayTo);
   assert.ok(visuals.path.parent===visuals.root,'physical path belongs directly to the world illustration root');assert.deepEqual(visuals.path.scale.toArray(),[1,1,1]);
   assert.deepEqual(visuals.path.position.toArray(),[0,0,0]);
   assert.equal(visuals.guideAnchors.some(a=>/model|cameră|difuz|oglindă|sticlă|pixel/.test(a.text)),false);
-  if(['samples','loop'].includes(id)){
+  if(id==='samples'){
    assert.equal(visuals.packet.visible,false);assert.equal(visuals.selection.visible,false);
    assert.equal(visuals.segments.filter(o=>o.visible).length,5);
    const transmitted=visuals.segments[4],expected=new T.Vector3(...route[4]).lerp(new T.Vector3(...route[5]),(beat.rayTo-4)/2);

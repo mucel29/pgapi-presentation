@@ -246,3 +246,26 @@ body.glass-diagram[data-layout=travel] #active-figure,body.glass-diagram[data-la
 body.glass-diagram #glass-figure svg{max-height:230px}
 body.glass-diagram #intro{display:none}
 body.glass-diagram.experiment-expanded #glass-figure svg{max-height:330px}
+/* The first returned camera image is a single grainy frame; comparisons follow it. */
+body.initial-image #image-comparison{inset:var(--header-height) 0 var(--footer-height);padding:0;border:0;border-radius:0;background:#0d2029}
+body.initial-image .comparison-views{display:block;width:100%;height:100%}
+body.initial-image .comparison-views figure:first-child{width:100%;height:100%;display:block}
+body.initial-image .comparison-views canvas{display:block;object-fit:cover}
+body.initial-image .comparison-views figure:last-child,body.initial-image .comparison-views figcaption,body.initial-image #comparison-controls,body.initial-image #comparison-state{display:none}
+body.initial-image .comparison-caption{position:absolute;bottom:14px;right:18px;z-index:1;padding:4px 8px;background:#102632dc;border:1px solid #8ba6a455;letter-spacing:0;font-size:11px}
+body.initial-image #presentation{top:calc(var(--header-height) + 12px);left:20px;right:20px;z-index:4;pointer-events:none}
+body.initial-image #title{font-size:20px;text-shadow:0 2px 6px #000}body.initial-image #lesson-tools{pointer-events:auto}
+#comparison-controls [aria-pressed=true]{border-color:var(--gold);background:#514530}
+#pipeline-stage{position:fixed;inset:145px 24px calc(var(--footer-height) + 14px);z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;background:#102632f5;border:1px solid #8ba6a470;border-radius:4px}
+#pipeline-stage svg{width:min(100%,1500px);height:auto;max-height:80%}
+#pipeline-stage svg text{font-size:19px}#pipeline-stage svg text.tree-small{font-size:15px}
+.pipeline-legend{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;color:#bed6ce;font:12px/1.5 Mono}
+body.diagram-stage #presentation{top:calc(var(--header-height) + 4px);bottom:auto;left:24px;right:24px;width:auto;max-height:70px;border:0;background:none;box-shadow:none;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:16px}
+body.diagram-stage #lesson-scroll{padding:4px 0;overflow:visible}body.diagram-stage #section,body.diagram-stage #active-figure,body.diagram-stage #intro,body.diagram-stage #reasoning,body.diagram-stage #formula-block,body.diagram-stage #expand-experiment{display:none!important}
+body.diagram-stage h1{font-size:24px;line-height:1.25;margin:0}body.diagram-stage #lesson-tools{padding:0;border:0;flex:none}
+body.exploring #pipeline-stage{display:none}
+@media(max-width:759px){
+ body.initial-image .comparison-caption{font-size:9px;bottom:8px;right:10px}body.initial-image #presentation{left:12px;right:12px}body.initial-image #title{font-size:17px}
+ #pipeline-stage{inset:128px 10px calc(var(--footer-height) + 8px);padding:10px;gap:12px}.pipeline-legend{font-size:9px;gap:8px 18px}
+ body.diagram-stage #presentation{left:12px;right:12px;max-height:58px;gap:7px}body.diagram-stage h1{font-size:18px}
+}

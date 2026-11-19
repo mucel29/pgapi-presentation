@@ -21,10 +21,13 @@ export class Journey{
  private sceneViewport={left:0,top:0,width:1,height:1};private keys=new Set<string>();private previous=0;private active=true;private from=new T.Vector3();private fromTarget=new T.Vector3();private target=new T.Vector3();private portalFrom:[number,number,number]=[...portalStart];private monitorPosition:[number,number,number]=[...portalStart];
  private tracingRequests=new RequestGeneration();private drawKey='';private portalAspect=-1;private portalFrame=-1;private portalCamera=new T.PerspectiveCamera(43,1.66/1.06,.05,400);private portalTarget=new T.WebGLRenderTarget(480,306);
  private transitionFrom:Beat|null=null;private transitionShot:Beat|null=null;
+ private rasterTarget=new T.WebGLRenderTarget(480,270,{minFilter:T.NearestFilter,magFilter:T.NearestFilter});
+ private rasterQuad=new T.Scene();private rasterCamera=new T.OrthographicCamera(-1,1,1,-1,0,1);
  onFrame:((stats:{samples:number;moving:boolean;width:number;height:number;bounces:number;resets:number}|undefined)=>void)|null=null;
  constructor(public canvas:HTMLCanvasElement){
   this.renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'default',preserveDrawingBuffer:true});this.renderer.setPixelRatio(1);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFShadowMap;this.renderer.shadowMap.autoUpdate=false;
   this.renderer.toneMapping=T.ACESFilmicToneMapping;this.supported=Boolean(this.renderer.extensions.get('EXT_color_buffer_float'));
+  const blit=new T.Mesh(new T.PlaneGeometry(2,2),new T.MeshBasicMaterial({map:this.rasterTarget.texture,depthTest:false,depthWrite:false,toneMapped:false}));blit.frustumCulled=false;this.rasterQuad.add(blit);
   if(!this.supported)for(const s of [this.room,this.courtyard]){s.scene.environment=null;for(const m of s.materials)if(m instanceof T.MeshPhysicalMaterial){m.transmission=0;m.transparent=true;m.opacity=.35;}}
   this.visuals=new JourneyVisuals(this.courtyard);if(!this.supported){this.visuals.rasterOnly.visible=false;const material=this.courtyard.reflector.material as T.MeshStandardMaterial;material.metalness=.2;material.roughness=.35;}this.portalTarget.texture.minFilter=T.NearestFilter;this.portalTarget.texture.magFilter=T.NearestFilter;this.room.display.map=this.portalTarget.texture;this.room.display.toneMapped=true;
   const preview=portalWorldPose(0);this.portalCamera.position.set(...preview.position);this.portalCamera.lookAt(...preview.target);
@@ -45,7 +48,7 @@ export class Journey{
  get guideLabels(){return this.visuals.guideAnchors.map(({point,...label})=>({...label,...this.projectPoint(point)}));}
  get graphicsStatus(){return this.supported?'raster':'raster-only';}
  get rayWeight(){return weightDisplay(throughput[Math.min(4,Math.max(0,Math.floor(this.visuals.progress)))]);}
- resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=this.exploring?explorerRaster(width,height,this.pendingSettings.scale??1):retroRaster(width,height);this.renderer.setSize(size.width,size.height,false);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.canvas.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
+ resize(){const rect=this.canvas.getBoundingClientRect(),width=Math.max(1,rect.width||this.sceneViewport.width),height=Math.max(1,rect.height||this.sceneViewport.height);this.camera.aspect=width/height;this.camera.clearViewOffset();this.camera.updateProjectionMatrix();if(this.pathTracing)this.finale?.invalidate();else{const size=this.exploring?explorerRaster(width,height,this.pendingSettings.scale??1):{width:Math.round(width),height:Math.round(height)};this.renderer.setSize(size.width,size.height,false);const raster=retroRaster(width,height);this.rasterTarget.setSize(raster.width,raster.height);}if(!this.exploring){this.updateTransition(this.transition);this.visuals.fitHead(this.camera,this.rasterTarget.height);this.visuals.setResolution(this.canvas.width,this.canvas.height);}this.invalidateRaster();}
  setBeat(index:number,immediate=false,replay=false){
   const currentPosition=this.camera.position.toArray() as Vec3,currentTarget=this.target.toArray() as Vec3;
   this.invalidateRaster();this.portalFrame=-1;this.index=Math.max(0,Math.min(beats.length-1,index));const b=this.beat,previous=beats[Math.max(0,this.index-1)];this.elapsed=0;this.transition=immediate?1:0;
@@ -60,7 +63,7 @@ export class Journey{
   this.visuals.root.visible=!['image','loop','noise','temporal','denoise','denoise-pipeline','temporal-motion'].includes(b.id);
   this.visuals.apply(b);if(immediate||this.transitionShot.seconds===0||matchMedia('(prefers-reduced-motion: reduce)').matches)this.finish();else this.updateTransition(0);
  }
- finish(){const b=this.beat;this.transition=1;this.elapsed=b.travel?b.seconds:0;this.updateTransition(1);this.visuals.update(this.elapsed,b.rayTo);this.visuals.fitHead(this.camera,this.canvas.height);this.invalidateRaster();}
+ finish(){const b=this.beat;this.transition=1;this.elapsed=b.travel?b.seconds:0;this.updateTransition(1);this.visuals.update(this.elapsed,b.rayTo);this.visuals.fitHead(this.camera,this.rasterTarget.height);this.invalidateRaster();}
  async exploreRaster(){this.exploring=true;this.camera.clearViewOffset();this.visuals.root.visible=false;this.courtyard.setBeauty(true);this.camera.position.set(...finalView.camera);this.controls.target.set(...finalView.target);this.controls.enabled=true;this.controls.update();this.renderer.shadowMap.needsUpdate=true;this.resize();}
  async startTracing(){
   const isCurrent=this.tracingRequests.begin(),active=()=>isCurrent()&&this.exploring;
@@ -84,7 +87,17 @@ export class Journey{
   this.portalFrame=frame;this.portalAspect=aspect;this.portalCamera.fov=portalLens(aspect).textureFov;this.portalCamera.updateProjectionMatrix();
   const start=b.scene==='room'?[portalStart[0]+Math.sin(this.elapsed*.18)*.7,portalStart[1],portalStart[2]+Math.sin(this.elapsed*.13)*.9] as [number,number,number]:this.portalFrom;
   const pose=portalWorldPose(b.scene==='portal'?this.transition:0,start);if(b.scene==='room')this.monitorPosition=[...pose.position];this.portalCamera.position.set(...pose.position);this.portalCamera.lookAt(...pose.target);
-  const visible=this.visuals.root.visible;this.visuals.root.visible=false;this.renderer.setRenderTarget(this.portalTarget);this.renderer.render(this.courtyard.scene,this.portalCamera);this.renderer.setRenderTarget(null);this.visuals.root.visible=visible;
+  const visible=this.visuals.root.visible,target=this.renderer.getRenderTarget();this.visuals.root.visible=false;try{this.renderer.setRenderTarget(this.portalTarget);this.renderer.render(this.courtyard.scene,this.portalCamera);}finally{this.renderer.setRenderTarget(target);this.visuals.root.visible=visible;}
+ }
+ // Only the model/world uses the retro target. BVH helpers keep the exact
+ // same world-space camera and are composited at the output's native size.
+ renderScene(scene:T.Scene,camera:T.Camera,overlay=false){
+  const renderer=this.renderer,target=renderer.getRenderTarget(),viewport=renderer.getViewport(new T.Vector4()),scissor=renderer.getScissor(new T.Vector4()),scissorTest=renderer.getScissorTest(),autoClear=renderer.autoClear;
+  try{
+   renderer.setScissorTest(false);renderer.autoClear=true;renderer.setRenderTarget(this.rasterTarget);renderer.render(scene,camera);
+   renderer.setRenderTarget(target);renderer.setViewport(viewport);renderer.render(this.rasterQuad,this.rasterCamera);
+   if(overlay){renderer.autoClear=false;renderer.clearDepth();this.visuals.setResolution(viewport.z,viewport.w);this.visuals.fitAccelerationMarkers(this.camera,viewport.w);renderer.render(this.visuals.accelerationOverlay,camera);}
+  }finally{renderer.setRenderTarget(target);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.autoClear=autoClear;}
  }
  private updateTransition(t:number){
   const b=this.transitionShot??this.beat,previous=this.transitionFrom??beats[Math.max(0,this.index-1)],state=shotPose(b,previous,t,this.camera.aspect,this.canvas.getBoundingClientRect().width||this.sceneViewport.width);
@@ -96,7 +109,7 @@ export class Journey{
   }else {this.camera.position.set(...state.position);this.target.set(...state.target);}
   this.camera.clearViewOffset();this.camera.lookAt(this.target);
  }
- captureAt(t:number){this.transition=Math.max(0,Math.min(1,t));this.elapsed=this.beat.seconds*this.transition;this.updateTransition(this.transition);const state=shotState(this.beat.motion??'arrive',this.transition,this.beat.rayFrom,this.beat.rayTo);this.visuals.update(this.elapsed,state.ray);this.visuals.fitHead(this.camera,this.canvas.height);this.paused=true;this.invalidateRaster();}
+ captureAt(t:number){this.transition=Math.max(0,Math.min(1,t));this.elapsed=this.beat.seconds*this.transition;this.updateTransition(this.transition);const state=shotState(this.beat.motion??'arrive',this.transition,this.beat.rayFrom,this.beat.rayTo);this.visuals.update(this.elapsed,state.ray);this.visuals.fitHead(this.camera,this.rasterTarget.height);this.paused=true;this.invalidateRaster();}
  private frame=(now:number)=>{
   requestAnimationFrame(this.frame);if(!this.active)return;const measured=this.previous?(now-this.previous)/1000:0;if(measured&&measured<1/32)return;this.previous=now;if(measured>0)this.fps=this.fps*.9+(1/measured)*.1;const dt=Math.min(.06,measured);
   if(this.exploring){
@@ -104,13 +117,13 @@ export class Journey{
     if(this.pathTracing&&!this.paused){if(this.finale)this.finale.focusDistance=this.controls.getDistance();this.onFrame?.(this.finale?.render(now));}else {this.renderer.setRenderTarget(null);this.renderer.render(this.courtyard.scene,this.camera);}return;
   }
   const b=this.beat;if(!this.paused){this.elapsed+=dt;if(this.transition<1){this.transition=Math.min(1,this.elapsed/Math.max(.01,this.transitionShot?.seconds??b.seconds));this.updateTransition(this.transition);
-   }const state=shotState(b.motion??'arrive',this.transition,b.rayFrom,b.rayTo);this.visuals.update(this.elapsed,state.ray);this.visuals.fitHead(this.camera,this.canvas.height);}
+   }const state=shotState(b.motion??'arrive',this.transition,b.rayFrom,b.rayTo);this.visuals.update(this.elapsed,state.ray);this.visuals.fitHead(this.camera,this.rasterTarget.height);}
   const animated=!this.paused&&(b.scene==='room'||this.transition<1||this.visuals.isEmitting||this.visuals.traversalActive&&this.visuals.manualStep===null);
   const drawKey=[this.index,this.transition,this.visuals.selected.id,this.visuals.lastStep,this.visuals.revision,innerWidth,innerHeight].join('/');
   if(!animated&&drawKey===this.drawKey)return;this.drawKey=drawKey;
-  if(b.scene==='room'||b.scene==='portal'&&this.transition<portalCut){this.renderPortal();if(!this.room.scene.children.some(o=>o instanceof T.DirectionalLight&&o.shadow.map))this.renderer.shadowMap.needsUpdate=true;this.renderer.render(this.room.scene,this.camera);
+  if(b.scene==='room'||b.scene==='portal'&&this.transition<portalCut){this.renderPortal();if(!this.room.scene.children.some(o=>o instanceof T.DirectionalLight&&o.shadow.map))this.renderer.shadowMap.needsUpdate=true;this.renderScene(this.room.scene,this.camera);
 
-  }else if(this.visuals.accelerationActive){this.renderer.render(this.visuals.accelerationScene,this.camera);}
-  else {if(!this.courtyard.scene.children.some(o=>o instanceof T.DirectionalLight&&o.shadow.map))this.renderer.shadowMap.needsUpdate=true;this.renderer.render(this.courtyard.scene,this.camera);}
+  }else if(this.visuals.accelerationActive){this.renderScene(this.visuals.accelerationScene,this.camera,true);}
+  else {if(!this.courtyard.scene.children.some(o=>o instanceof T.DirectionalLight&&o.shadow.map))this.renderer.shadowMap.needsUpdate=true;this.renderScene(this.courtyard.scene,this.camera);}
  };
 }

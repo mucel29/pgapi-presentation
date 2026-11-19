@@ -9,7 +9,7 @@ import {Reflector} from 'three/addons/objects/Reflector.js';
 import {cosineHemisphere,normalize,sub,add,mul,rng,reflect,type Vec3} from '../core/math.ts';
 import {route,diffuseNormal,metalNormal,glassNormal,origin,throughput} from '../core/route.ts';
 import {traceSAH,type Node} from '../core/bvh.ts';
-import {createAccelerationData} from '../core/acceleration-model.ts';
+import {createAccelerationData,probeClearance} from '../core/acceleration-model.ts';
 import {materialPalette} from '../core/transport.ts';
 import {primaryHit} from '../core/sphere-mesh.ts';
 import {slabIntervals} from '../core/experiments.ts';
@@ -36,16 +36,17 @@ export class JourneyVisuals{
  root=new T.Group();rasterOnly=new T.Group();path=new T.Group();hemisphere=new T.Group();normals=new T.Group();boxes=new T.Group();wire=new T.Group();materialRays=new T.Group();
  sampleRays=new T.Group();private sampleCount=2;private sampleDepth=3;private samplePaths:{points:Vec3[];segments:T.Mesh[];head:T.Mesh;pixel:T.Mesh;started:number}[]=[];private playbackStarted=0;
  packet=marker(0xfff3cd,.2);private headHalo=marker(GOLD,.42);private tail=beam(0xffedbb,.13);private tailHalo=beam(GOLD,.26,.16);private contact=new T.Mesh(new T.TorusGeometry(.58,.045,6,32),new T.MeshBasicMaterial({color:GOLD,transparent:true,opacity:.7,depthWrite:false,toneMapped:false}));segments:T.Mesh[]=[];boxObjects=new Map<number,{group:T.Group;ink:LineMaterial;outline:LineMaterial}>();nodes:Node[]=[];selected:Node;lastStep=-1;manualStep:number|null=null;beat:Beat|null=null;progress=0;revision=0;
- testRayOrigin:Vec3=[0,0,0];testRayDirection:Vec3=[0,0,-1];rayCase='hit';primaryTriangle!:LineSegments2;private primaryInk!:LineMaterial;private traceResult:ReturnType<typeof traceSAH>;private testBeam:T.Mesh;private hitMesh:T.Mesh;private hitOutline:LineSegments2;private hitCorners=[marker(0xffedf6,.1),marker(0xffedf6,.1),marker(0xffedf6,.1)];private hitLabel=textLabel('closest-hit','#ff96ce');private hitPoint=marker(0xff70b8,.13);private hitId=-2;private highlightKey='';
+ testRayOrigin:Vec3=[0,0,0];testRayDirection:Vec3=[0,0,-1];rayCase='hit';primaryTriangle!:LineSegments2;private primaryInk!:LineMaterial;private traceResult:ReturnType<typeof traceSAH>;private testBeam:LineSegments2;private queryInk:LineMaterial;private queryOutline:LineMaterial;private queryTip=arrowTip(GOLD);private hitMesh:T.Mesh;private hitOutline:LineSegments2;private hitCorners=[marker(0xffedf6,.1),marker(0xffedf6,.1),marker(0xffedf6,.1)];private hitLabel=textLabel('closest-hit','#ff96ce');private hitPoint=marker(0xff70b8,.13);private hitId=-2;private highlightKey='';
  private fans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private mirrorFans:{mesh:T.Mesh;a:Vec3;b:Vec3;tip:T.Mesh}[]=[];private highlight:T.Mesh;private triangleInk:LineMaterial;private triangleOutline:LineMaterial;private selectedEdges:LineSegments2;private selectedInk:LineMaterial;private hitInk:LineMaterial;private elapsed=0;private userSelected=false;private splitPlane:T.Mesh;candidateIndex=0;
  room:Courtyard;
- accelerationData:ReturnType<typeof createAccelerationData>;accelerationScene=new T.Scene();accelerationModel!:T.Mesh;
+ accelerationData:ReturnType<typeof createAccelerationData>;accelerationScene=new T.Scene();accelerationOverlay=new T.Scene();accelerationModel!:T.Mesh;
  get accelerationActive(){return ['cost','bvh','sah','aabb','traversal'].includes(this.beat?.visual??'');}
  get triangleCount(){return this.accelerationData.triangles.length;}
  private splitLabel=textLabel('plan X','#ffc576');
  private queryLabel=textLabel('raza traseului · Stanford Bunny','#ffdf98');
  cameraRig=new T.Group();glassRig=new T.Group();selection=new T.Group();slabContacts=new T.Group();sahVolumes=new T.Group();
  private normalEvents:T.Group[]=[];private reflectionProof=new T.Group();private mirrorSelected:T.Mesh;private selectedDirection=textLabel('direcția aleasă','#ffdf98');
+ private clearanceTriangle=new T.Mesh(new T.BufferGeometry().setFromPoints(probeClearance.vertices.map(p=>new T.Vector3(...p))),new T.MeshBasicMaterial({color:0xffe6ac,side:T.DoubleSide,transparent:true,opacity:.3,depthTest:false,depthWrite:false,toneMapped:false}));
  private slabNear=marker(0x8cdbb4,.35);private slabFar=marker(0xffc576,.35);
  get guideAnchors(){
   const anchors:{id:string;text:string;color:string;point:Vec3}[]=[];
@@ -59,9 +60,11 @@ export class JourneyVisuals{
   this.testRayOrigin=[...this.accelerationData.rayOrigin];this.testRayDirection=[...this.accelerationData.rayDirection];this.traceResult=this.accelerationData.traversal;
   this.accelerationScene.background=new T.Color('#14232e');
   this.accelerationModel=new T.Mesh(this.accelerationData.geometry,new T.MeshStandardMaterial({vertexColors:true,roughness:.65,metalness:.15,side:T.DoubleSide,flatShading:true}));this.accelerationModel.name='Stanford Bunny — BVH triangle mesh';this.accelerationScene.add(this.accelerationModel,new T.HemisphereLight(0xd9eef8,0x27323e,2.2));const modelLight=new T.DirectionalLight(0xffdfb0,3);modelLight.position.set(-8,14,16);this.accelerationScene.add(modelLight);
+  const pedestal=new T.Mesh(new T.CylinderGeometry(5.4,5.8,1.2,12),new T.MeshStandardMaterial({color:0x405764,roughness:.9,flatShading:true}));pedestal.position.y=this.tree.min[1]-.6;pedestal.name='Stanford Bunny pedestal';this.accelerationScene.add(pedestal);
   this.root.name='Illustrations — excluded from path tracing';room.scene.add(this.root);const mirror=new Reflector(new T.PlaneGeometry(9,10),{textureWidth:256,textureHeight:256,color:materialPalette.metal,clipBias:.003,multisample:0});mirror.position.set(...route[2]).addScaledVector(new T.Vector3(...metalNormal),.025);mirror.quaternion.copy(surfaceRotation(metalNormal));const renderMirror=mirror.onBeforeRender.bind(mirror);mirror.onBeforeRender=(renderer,scene,camera,geometry,material,group)=>{const rv=room.reflector.visible,fv=room.reflectorFrame.visible,iv=this.root.visible;room.reflector.visible=false;room.reflectorFrame.visible=false;this.root.visible=false;try{renderMirror(renderer,scene,camera,geometry,material,group);}finally{room.reflector.visible=rv;room.reflectorFrame.visible=fv;this.root.visible=iv;}};mirror.name='Raster planar reflection — excluded from tracer';this.rasterOnly.name='Raster reflections';room.scene.add(this.rasterOnly);this.rasterOnly.add(mirror);
   (this.headHalo.material as T.MeshBasicMaterial).opacity=.15;this.headHalo.renderOrder=13;this.packet.renderOrder=15;this.contact.renderOrder=14;
   this.root.add(this.headHalo,this.tail,this.tailHalo,this.contact);
+  this.clearanceTriangle.renderOrder=20;this.root.add(this.clearanceTriangle);
   this.root.add(this.sampleRays,this.path,this.hemisphere,this.normals,this.boxes,this.wire,this.materialRays,this.packet,this.cameraRig,this.glassRig,this.selection,this.slabContacts,this.sahVolumes,this.reflectionProof,this.splitLabel);
   const {center,right,up,footprint}=cameraPixel;
   // A flat image plane, never a 3D frustum. All cells and q share the sampler basis.
@@ -158,9 +161,16 @@ export class JourneyVisuals{
   this.root.add(this.hitMesh,this.hitOutline,this.hitPoint,...this.hitCorners,this.hitLabel);
   // The sphere triangle that the primary ray hits, the same one as in the panel.
   {const tri=primaryHit().triangle,edges=[0,1,1,2,2,0].flatMap(i=>tri[i]);this.primaryInk=new LineMaterial({color:0xffffff,linewidth:2.2,depthTest:false,depthWrite:false,toneMapped:false});this.primaryTriangle=new LineSegments2(new LineSegmentsGeometry().setPositions(edges),this.primaryInk);this.primaryTriangle.renderOrder=40;this.primaryTriangle.visible=false;this.root.add(this.primaryTriangle);}
-  const test=beam(0xffdf98,.14);this.testBeam=test;stretch(test,this.accelerationData.rayOrigin,add(this.accelerationData.rayOrigin,mul(this.accelerationData.rayDirection,Number.isFinite(this.accelerationData.traversal.closest)?this.accelerationData.traversal.closest:28)));this.wire.add(test,this.queryLabel);
+  this.queryInk=new LineMaterial({color:GOLD,linewidth:2.2,transparent:true,depthTest:false,depthWrite:false,toneMapped:false});this.queryOutline=new LineMaterial({color:0x08151e,linewidth:4.2,transparent:true,depthTest:false,depthWrite:false,toneMapped:false});
+  const queryGeometry=new LineSegmentsGeometry().setPositions([0,0,0,0,0,1]);this.testBeam=new LineSegments2(queryGeometry,this.queryInk);this.testBeam.name='BVH query ray';const queryBorder=new LineSegments2(queryGeometry,this.queryOutline);queryBorder.renderOrder=98;this.testBeam.renderOrder=99;this.queryTip.name='BVH query direction';this.queryTip.renderOrder=100;(this.queryTip.material as T.MeshBasicMaterial).depthTest=false;this.hitPoint.renderOrder=101;(this.hitPoint.material as T.MeshBasicMaterial).depthTest=false;this.wire.add(queryBorder,this.testBeam,this.queryTip,this.queryLabel);
+  this.setRay(this.testRayOrigin,this.testRayDirection,'hit');
  }
- setResolution(width:number,height:number){for(const ink of [this.primaryInk,this.triangleInk,this.triangleOutline,this.selectedInk,this.hitInk])ink.resolution.set(width,height);for(const box of this.boxObjects.values()){box.ink.resolution.set(width,height);box.outline.resolution.set(width,height);box.ink.linewidth=1;box.outline.linewidth=2.4;}}
+ setResolution(width:number,height:number){for(const ink of [this.primaryInk,this.triangleInk,this.triangleOutline,this.selectedInk,this.hitInk,this.queryInk,this.queryOutline])ink.resolution.set(width,height);for(const box of this.boxObjects.values()){box.ink.resolution.set(width,height);box.outline.resolution.set(width,height);}}
+ fitAccelerationMarkers(camera:T.PerspectiveCamera,height:number){
+  const scale=(point:T.Vector3,radius:number,pixels:number)=>2*Math.tan(T.MathUtils.degToRad(camera.fov)/2)*camera.position.distanceTo(point)/Math.max(1,height)*pixels/radius;
+  this.hitPoint.scale.setScalar(scale(this.hitPoint.position,.13,1.8));this.hitCorners.forEach(corner=>corner.scale.setScalar(scale(corner.position,.1,1.7)));this.queryTip.scale.setScalar(scale(this.queryTip.position,.18,3.5));
+  for(const marker of [this.slabNear,this.slabFar])marker.scale.setScalar(scale(marker.position,.35,3));
+ }
  get diffusePhase(){return this.beat?.id==='diffuse-chosen'?'selected':'candidates';}
  get traversalActive(){return ['traversal'].includes(this.beat?.visual??'');}
  get isEmitting(){
@@ -179,7 +189,7 @@ export class JourneyVisuals{
  get splitCandidates(){const candidates=[...this.tree.candidates].sort((a,b)=>a.cost-b.cost);return [candidates[0],candidates[Math.floor(candidates.length/3)],candidates[Math.floor(candidates.length*2/3)]];}
  setSplitCandidate(index:number){this.candidateIndex=Math.max(0,Math.min(2,index));this.revision++;this.updateBoxes();}
  get tree(){return this.accelerationData.tree;}get traversal(){return this.traceResult;}
- apply(beat:Beat){this.revision++;this.candidateIndex=0;this.beat=beat;(this.accelerationActive?this.accelerationScene:this.room.scene).add(this.root);this.elapsed=0;this.lastStep=-1;this.manualStep=null;this.selected=this.tree;this.userSelected=false;this.progress=beat.rayFrom;this.setCase('hit');this.manualStep=null;this.playbackStarted=0;this.samplePaths.forEach((sample,i)=>sample.started=i*.28);this.update(0,beat.rayFrom);}
+ apply(beat:Beat){this.revision++;this.candidateIndex=0;this.beat=beat;(this.accelerationActive?this.accelerationOverlay:this.room.scene).add(this.root);this.elapsed=0;this.lastStep=-1;this.manualStep=null;this.selected=this.tree;this.userSelected=false;this.progress=beat.rayFrom;this.setCase('hit');this.manualStep=null;this.playbackStarted=0;this.samplePaths.forEach((sample,i)=>sample.started=i*.28);this.update(0,beat.rayFrom);}
  select(id:number){this.revision++;this.userSelected=true;const step=this.traversal.events.findIndex(e=>e.node.id===id);if(this.traversalActive&&step>=0){this.manualStep=step;this.lastStep=step;}this.selected=this.nodes.find(n=>n.id===id)??this.tree;this.updateBoxes();}
  step(delta:number){this.userSelected=false;this.manualStep=Math.max(0,Math.min(this.traversal.events.length-1,(this.manualStep??Math.max(0,this.lastStep))+delta));this.update(this.elapsed,this.progress);}
  setCase(kind:string){
@@ -190,7 +200,7 @@ export class JourneyVisuals{
  }
  setRay(o:Vec3,d:Vec3,label='custom'){
   this.testRayOrigin=[...o];this.testRayDirection=normalize(d);this.rayCase=label;this.traceResult=traceSAH(this.tree,this.accelerationData.triangles,this.testRayOrigin,this.testRayDirection);this.manualStep=null;this.lastStep=0;this.playbackStarted=this.elapsed;this.userSelected=false;this.selected=this.tree;this.revision++;
-  stretch(this.testBeam,this.testRayOrigin,add(this.testRayOrigin,mul(this.testRayDirection,Math.min(100,this.traceResult.closest+8)||36)));
+  const bounds=slabIntervals(this.testRayOrigin,this.testRayDirection,this.tree.min,this.tree.max),length=Number.isFinite(this.traceResult.closest)?this.traceResult.closest+3:bounds.hit?Math.max(24,bounds.far+3):28,end=add(this.testRayOrigin,mul(this.testRayDirection,length));this.testBeam.geometry.setPositions([...this.testRayOrigin,...end]);this.queryTip.position.set(...end);this.queryTip.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(...this.testRayDirection));
   this.queryLabel.position.set(...add(this.testRayOrigin,[0,2,0]));
   this.updateBoxes();
  }
@@ -205,8 +215,8 @@ export class JourneyVisuals{
   for(const node of this.nodes){
    const box=this.boxObjects.get(node.id)!;const isActive=node===active;
    box.group.visible=this.boxes.visible;
-   box.ink.color.set(isActive?0xffd68b:0x9db4bf);box.ink.transparent=true;box.ink.opacity=isActive?1:.045;box.ink.linewidth=isActive?2.6:.65;box.ink.dashed=false;
-   box.outline.transparent=true;box.outline.opacity=isActive?.7:0;box.outline.linewidth=isActive?4.5:1;
+   box.ink.color.set(isActive?0xffd68b:0x9db4bf);box.ink.transparent=true;box.ink.opacity=isActive?1:.035;box.ink.linewidth=isActive?1.7:.65;box.ink.dashed=false;
+   box.outline.transparent=true;box.outline.opacity=isActive?.7:0;box.outline.linewidth=isActive?3.3:1;
 
   }
 
@@ -257,6 +267,7 @@ export class JourneyVisuals{
  }
  update(elapsed:number,progress:number){
   this.elapsed=elapsed;this.progress=progress;const c=this.beat?.visual??'';const bvh=['cost','bvh','sah','aabb','traversal'].includes(c);
+  this.clearanceTriangle.visible=this.beat?.motion==='beacon'&&Math.abs(progress-probeClearance.progress)<.025;
   // Selected and sampled paths keep their real world coordinates and scale.
   this.path.visible=c!=='room'&&!bvh;
   this.primaryTriangle.visible=c==='hit';

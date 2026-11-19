@@ -22,6 +22,7 @@ export class NoiseAverage {
 /** Both views use the exact same raster image and prefix of synthetic noise. */
 export class ImageComparison {
  private base:ImageData|null=null;
+ private reference=new Float32Array(0);
  noise=new NoiseAverage(0);
  private left:HTMLCanvasElement;private right:HTMLCanvasElement;
  constructor(left:HTMLCanvasElement,right:HTMLCanvasElement){this.left=left;this.right=right;}
@@ -31,16 +32,16 @@ export class ImageComparison {
   const ctx=scratch.getContext('2d');if(!ctx)return;
   ctx.drawImage(source,0,0,width,height);this.base=ctx.getImageData(0,0,width,height);
   for(const canvas of [this.left,this.right]){canvas.width=width;canvas.height=height;}
-  this.noise=new NoiseAverage(width*height);this.noise.setSamples(1);
+  this.noise=new NoiseAverage(width*height);this.noise.setSamples(1);this.reference=this.noise.first.slice();
  }
  draw(samples:number){
   if(!this.base)return;
-  this.noise.setSamples(Math.max(1,samples));
+  if(samples<=0)this.noise.reset();else this.noise.setSamples(samples);
   for(const [canvas,baseline] of [[this.left,true],[this.right,false]] as const){
    const ctx=canvas.getContext('2d');if(!ctx)continue;
    const output=ctx.createImageData(this.base.width,this.base.height);
    for(let i=0;i<this.noise.length;i++){
-    const value=baseline?this.noise.first[i]:this.noise.sum[i]/this.noise.count;
+    const value=baseline?this.reference[i]:this.noise.sum[i]/this.noise.count;
     for(let c=0;c<3;c++)output.data[i*4+c]=samples||baseline?this.base.data[i*4+c]*(1+value*.85)+value*75:0;
     output.data[i*4+3]=255;
    }

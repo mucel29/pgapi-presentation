@@ -1,9 +1,10 @@
 import * as T from 'three';
+import {probeClearance} from './acceleration-model.ts';
 import {add,mul,sub,type Vec3} from './math.ts';
 import {route} from './route.ts';
 import {observatory} from './world.ts';
 import {monitor,portalLens,portalCut} from './portal.ts';
-export type ShotMotion='hold'|'launch'|'travel'|'glass'|'portal'|'arrive';
+export type ShotMotion='hold'|'launch'|'travel'|'glass'|'portal'|'arrive'|'beacon';
 export const clamp01=(t:number)=>Math.max(0,Math.min(1,t));
 export const ease=(t:number)=>{const u=clamp01(t);return u*u*u*(u*(u*6-15)+10);};
 const windowed=(t:number,a:number,b:number)=>ease((t-a)/(b-a));
@@ -34,6 +35,10 @@ export function shotState(motion:ShotMotion,t:number,from:number,to:number){
   const entry=routeDistance(from,3),exit=routeDistance(from,4);
   distance=u<.5?entry*windowed(u,.08,.5):u<.6?entry:u<.74?entry+(exit-entry)*windowed(u,.6,.74):u<.82?exit:exit+(total-exit)*windowed(u,.82,.94);
  }
+ if(motion==='beacon'){
+  const approach=routeDistance(from,probeClearance.progress);
+  distance=u<.4?approach*windowed(u,.04,.4):u<.52?approach:approach+(total-approach)*windowed(u,.52,.96);
+ }
  const ray=total?progressAtDistance(from,to,distance):to;
  const phase=u<.13?'anticipation':u>.94?'arrival':motion==='glass'&&((u>=.5&&u<=.6)||(u>=.74&&u<=.82))?'interface':'travel';
  return {camera,ray:u===1?to:ray,phase};
@@ -57,6 +62,11 @@ export function shotPose(shot:ShotDefinition,previous:ShotDefinition,t:number,as
  const state=shotState(shot.motion??'arrive',t,shot.rayFrom,shot.rayTo);
  if(shot.motion==='portal')return {...portalWorldPose(t),...state};
  const compact=viewportWidth<1000&&aspect>1.5,fromCamera=aspect<.9?previous.portraitCamera??previous.camera:compact?previous.compactCamera??previous.camera:previous.camera,toCamera=aspect<.9?shot.portraitCamera??shot.camera:compact?shot.compactCamera??shot.camera:shot.camera,fromTarget=aspect<.9?previous.portraitTarget??previous.target:compact?previous.compactTarget??previous.target:previous.target,toTarget=aspect<.9?shot.portraitTarget??shot.target:compact?shot.compactTarget??shot.target:shot.target;
+ if(shot.motion==='beacon'){
+  const focus=shot.aimVia?.[0]??probeClearance.point,close=shot.via?.[0]??add(focus,[-5,3.5,6]),closeCamera=aspect<.9?add(focus,mul(sub(close,focus),1.5)):close;
+  const leaving=t>=.52,blend=leaving?windowed(t,.52,.96):windowed(t,.04,.4),a=leaving?closeCamera:fromCamera,b=leaving?toCamera:closeCamera,ta=leaving?focus:fromTarget,tb=leaving?toTarget:focus;
+  return {position:add(a,mul(sub(b,a),blend)),target:add(ta,mul(sub(tb,ta),blend)),...state};
+ }
  if(shot.motion==='travel'||shot.motion==='launch'){
   const fromHead=routePoint(shot.rayFrom),toHead=routePoint(shot.rayTo),head=routePoint(state.ray),blend=state.camera;
   const fromOffset=sub(fromCamera,fromHead),toOffset=sub(toCamera,toHead),fromAim=sub(fromTarget,fromHead),toAim=sub(toTarget,toHead);

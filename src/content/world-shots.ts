@@ -3,7 +3,7 @@ import {add,sub,mul,normalize,cross} from '../core/math.ts';
 import {route} from '../core/route.ts';
 import {cameraPixel} from '../core/sampling.ts';
 import {observatory} from '../core/world.ts';
-import {probePosition} from '../core/acceleration-model.ts';
+import {probePosition,probeClearance} from '../core/acceleration-model.ts';
 import type {Beat} from './chapters.ts';
 
 // Framing belongs to the shot rather than the canvas: the world never changes
@@ -36,11 +36,10 @@ const shots:Record<string,Partial<Beat>>={
  'to-metal':{...mirrorView,seconds:6.6},
  materials:{...mirrorView,seconds:0,motion:'hold'},
  'to-glass':{...glassView,seconds:7.8},
- 'near-bunny':{...bunnyPass,seconds:3.8,via:[],aimVia:[],rayFrom:4,rayTo:4+32/70},
  'acceleration-intro':{...bunnyPass,seconds:2.5,motion:'arrive',via:[],aimVia:[],rayFrom:5,rayTo:5},
  bvh:{...bridgeView,seconds:2.5,motion:'arrive',via:[],aimVia:[],rayFrom:5,rayTo:5},
  aabb:{...bridgeView},traversal:{...bridgeView},
- 'to-light':{...beaconView,seconds:5,rayFrom:4+32/70,rayTo:5,via:[],aimVia:[]},
+ 'to-light':{...beaconView,motion:'beacon',seconds:8,rayFrom:4.18,rayTo:5,via:[add(probeClearance.point,[-5,3.5,6])],aimVia:[probeClearance.point]},
  light:{...beaconView,seconds:0,motion:'hold',via:[],aimVia:[]},
  image:{...imageHold},samples:{...originView,seconds:0,motion:'hold',via:[],aimVia:[],rayFrom:5,rayTo:5},loop:{...imageHold},noise:{...imageHold},temporal:{...imageHold},'temporal-motion':{...imageHold},denoise:{...imageHold},'denoise-pipeline':{...imageHold},
 };

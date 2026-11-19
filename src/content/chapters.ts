@@ -595,51 +595,7 @@ export const chapters:Chapter[] = [
       "formula": "Cₙ = Cₙ₋₁ + (Sₙ − Cₙ₋₁) / n"
     }
   },
-  {
-    "codeSource": "Pseudocod. Rendererul real: three-gpu-pathtracer 0.0.23",
-    "sources": [
-      "https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer",
-      "https://github.com/gkjohnson/three-gpu-pathtracer/tree/v0.0.23"
-    ],
-    "duration": "1:40",
-    "id": "loop",
-    "section": "IMPLEMENTARE",
-    "title": "Bucla de path tracing",
-    "accent": "L · β",
-    "intro": "Bucla păstrează două valori. L adună lumina găsită. β este ponderea cu care intră lumina următoare.",
-    "points": [
-      "La o sursă adunăm β·Le în L. La miss adunăm cerul.",
-      "Direct lighting trimite o rază de umbră spre o sursă. MIS evită să numărăm aceeași lumină de două ori.",
-      "La fiecare material alegem o direcție din BSDF și înmulțim β cu f·|n·ω|/pdf.",
-      "Russian roulette oprește traseele slabe și corectează ponderea celor rămase."
-    ],
-    "formula": "L ← L + β·contribuție;   β ← β·f·|n·ω|/pdf",
-    "formulaNote": "L: sumă · β: produs",
-    "code": "vec3 L = vec3(0.0), beta = vec3(1.0);\nfor (int b = 0; b < maxBounces; b++) {\n  Hit h = intersectScene(ray);\n  if (!h.found) { L += beta * environmentMIS(ray); break; }\n  L += beta * emittedMIS(h);\n  L += beta * estimateDirectMIS(h); // shadow ray\n  BSDFSample s = sampleBSDF(h, ray);\n  if (!s.valid) break;\n  beta *= s.weight; // f * abs(n·wi) / pdf, pentru BSDF continuu\n  ray = spawnOffsetRay(h, s.direction);\n}",
-    "codeLabel": "Pseudocod · un traseu",
-    "notes": "Bucla păstrează două valori. L adună lumina găsită. β este ponderea traseului. La început L = 0 și β = 1.\n\nApasă „Pas algoritm →”. La fiecare hit: adunăm emisia, trimitem o rază de umbră spre o sursă, alegem o direcție nouă din BSDF și înmulțim β. Ne oprim la miss, la limita de bounces sau prin Russian roulette. Codul complet este în „Cod”.",
-    "camera": [
-      -7,
-      17,
-      30
-    ],
-    "target": [
-      4,
-      5,
-      3
-    ],
-    "visual": "loop",
-    "layout": "technical",
-    "slide": {
-      "title": "Bucla de path tracing",
-      "intro": "L adună contribuțiile. β le păstrează ponderea.",
-      "points": [
-        "La material: alegem direcția și actualizăm β",
-        "La lumină: adăugăm o contribuție în L"
-      ],
-      "formula": "β *= f·|n·ω|/pdf"
-    }
-  },
+
   {
     "codeSource": "src/engine/denoiser.ts",
     "sources": [
@@ -968,33 +924,6 @@ export const beats:Beat[] = [
     ]
   },
   {
-    "id": "near-bunny",
-    "chapter": "materials",
-    "scene": "courtyard",
-    "camera": [
-      67,
-      6.2,
-      -29
-    ],
-    "target": [
-      79,
-      6,
-      -40
-    ],
-    "rayFrom": 4,
-    "rayTo": 4.457142857142857,
-    "visual": "light",
-    "seconds": 3.8,
-    "layout": "travel",
-    "travel": true,
-    "captureTime": 1,
-    "title": "La limită, pe lângă iepure",
-    "intro": "Raza trece pe lângă Stanford Bunny și continuă spre far.",
-    "via": [],
-    "aimVia": [],
-    "motion": "travel"
-  },
-  {
     "id": "to-light",
     "chapter": "light",
     "scene": "courtyard",
@@ -1016,7 +945,7 @@ export const beats:Beat[] = [
     "travel": true,
     "captureTime": 1,
     "title": "Spre far",
-    "intro": "Ultimul segment: de la sticlă, prin pod, la far.",
+    "intro": "Ultimul segment: de la sticlă, pe lângă Stanford Bunny, la far.",
     "via": [
       [
         49,
@@ -1198,6 +1127,43 @@ export const beats:Beat[] = [
     "motion": "hold"
   },
   {
+    "id": "image",
+    "chapter": "light",
+    "scene": "courtyard",
+    "camera": [
+      10,
+      42,
+      112
+    ],
+    "target": [
+      12,
+      4,
+      -5
+    ],
+    "rayFrom": 5,
+    "rayTo": 5,
+    "visual": "image",
+    "seconds": 0,
+    "layout": "scene",
+    "travel": false,
+    "captureTime": 1,
+    "via": [],
+    "motion": "hold",
+    "portraitCamera": [
+      10,
+      60,
+      230
+    ],
+    "portraitTarget": [
+      12,
+      5,
+      -5
+    ],
+    "title": "Imaginea inițială · 1 spp",
+    "intro": "Simulare de zgomot peste imaginea raster a camerei inițiale.",
+    "aimVia": []
+  },
+  {
     "id": "samples",
     "chapter": "samples",
     "scene": "courtyard",
@@ -1305,103 +1271,6 @@ export const beats:Beat[] = [
     "intro": "Păstrăm camera fixă și adunăm o estimare nouă în fiecare cadru."
   },
   {
-    "id": "temporal-motion",
-    "chapter": "temporal",
-    "scene": "courtyard",
-    "camera": [
-      44,
-      7,
-      -14
-    ],
-    "target": [
-      61,
-      6,
-      -24
-    ],
-    "rayFrom": 4.18,
-    "rayTo": 4.18,
-    "visual": "noise",
-    "seconds": 2.8,
-    "layout": "technical",
-    "travel": false,
-    "captureTime": 1,
-    "via": [
-      [
-        12,
-        12,
-        -10
-      ],
-      [
-        33,
-        8,
-        -10
-      ]
-    ],
-    "motion": "arrive",
-    "title": "Când scena se mișcă: reproiecție",
-    "intro": "Cubul în mișcare arată când păstrăm istoricul și când îl respingem."
-  },
-  {
-    "id": "image",
-    "chapter": "light",
-    "scene": "courtyard",
-    "camera": [
-      10,
-      42,
-      112
-    ],
-    "target": [
-      12,
-      4,
-      -5
-    ],
-    "rayFrom": 5,
-    "rayTo": 5,
-    "visual": "image",
-    "seconds": 0,
-    "layout": "scene",
-    "travel": false,
-    "captureTime": 1,
-    "via": [],
-    "motion": "hold",
-    "portraitCamera": [
-      10,
-      60,
-      230
-    ],
-    "portraitTarget": [
-      12,
-      5,
-      -5
-    ],
-    "title": "De la pixel la imagine",
-    "intro": "Privim prin camera inițială. Pixelul q este unul dintre pixelii acestei imagini.",
-    "aimVia": []
-  },
-  {
-    "id": "loop",
-    "chapter": "loop",
-    "scene": "courtyard",
-    "camera": [
-      -24,
-      8,
-      -4
-    ],
-    "target": [
-      -12,
-      4,
-      -38
-    ],
-    "rayFrom": 4.18,
-    "rayTo": 4.18,
-    "visual": "loop",
-    "seconds": 1.8,
-    "layout": "technical",
-    "travel": false,
-    "captureTime": 1,
-    "motion": "arrive"
-  },
-  {
     "id": "denoise",
     "chapter": "denoise",
     "scene": "courtyard",
@@ -1448,6 +1317,43 @@ export const beats:Beat[] = [
     "motion": "hold",
     "title": "Denoising în sisteme reale",
     "intro": "SVGF, NRD și OIDN combină acumularea temporală, ghidajele din G-buffer și filtrarea spațială."
+  },
+  {
+    "id": "temporal-motion",
+    "chapter": "temporal",
+    "scene": "courtyard",
+    "camera": [
+      44,
+      7,
+      -14
+    ],
+    "target": [
+      61,
+      6,
+      -24
+    ],
+    "rayFrom": 4.18,
+    "rayTo": 4.18,
+    "visual": "noise",
+    "seconds": 2.8,
+    "layout": "technical",
+    "travel": false,
+    "captureTime": 1,
+    "via": [
+      [
+        12,
+        12,
+        -10
+      ],
+      [
+        33,
+        8,
+        -10
+      ]
+    ],
+    "motion": "arrive",
+    "title": "Când scena se mișcă: reproiecție",
+    "intro": "Cubul în mișcare arată când păstrăm istoricul și când îl respingem."
   }
 ];
 

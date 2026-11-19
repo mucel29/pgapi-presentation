@@ -69,3 +69,15 @@ export function denoisePipelineSvg(){
  <rect x="142" y="130" width="430" height="52" rx="4" fill="#16333b" stroke="#476468" stroke-dasharray="4 4"/><text x="357" y="152" text-anchor="middle">G-buffer</text><text x="357" y="173" text-anchor="middle" class="tree-small">normală · adâncime · albedo · mișcare</text>
  <path d="M217 130V90M372 130V90M512 130V90" stroke="#8bc5c1" stroke-dasharray="3 4"/></svg>`;
 }
+
+/** Enlarges the existing guided synthetic experiment, with identical raw input in both views. */
+export function drawDenoiseComparison(left:HTMLCanvasElement,right:HTMLCanvasElement,passes=3,guided=true,strength=.8){
+ const signal=syntheticDenoiseSignal(),filtered=spatialFilter(signal,guided,passes,strength);
+ for(const [canvas,values] of [[left,signal.raw],[right,filtered]] as const){
+  canvas.width=signal.width;canvas.height=signal.height;
+  const ctx=canvas.getContext('2d');if(!ctx)continue;
+  const image=ctx.createImageData(signal.width,signal.height);
+  for(let i=0;i<values.length;i++)image.data.set([values[i]*220,values[i]*245,values[i]*225,255],i*4);
+  ctx.putImageData(image,0,0);
+ }
+}
